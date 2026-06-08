@@ -1,0 +1,22 @@
+# python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# build output (regenerable: ./run.sh render / build_tgs)
+build/
+dist/
+
+# tooling / editor / os
+.omo/
+.playwright-mcp/
+.DS_Store
+*.log
+node_modules/
+.fvm/
+
+# secrets — never commit (key is read at runtime from env / ~/.cli-proxy-api)
+*.key
+*.pem
+.env

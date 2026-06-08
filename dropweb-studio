@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# dropweb-studio — запуск студии стикеров dropweb (с ключом генерации) + открыть браузер
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+cd "$DIR"
+PORT="${1:-8765}"
+: "${CLIPROXY_KEY:=$(grep -oE 'sk-[a-f0-9]{32,}' "$HOME/.cli-proxy-api/cliproxyapi.conf.staged" 2>/dev/null | head -1 || true)}"
+export CLIPROXY_KEY
+( sleep 1.6; command -v open >/dev/null && open "http://localhost:$PORT" >/dev/null 2>&1 || true ) &
+echo "dropweb studio -> http://localhost:$PORT  (ключ генерации: ${CLIPROXY_KEY:+есть}${CLIPROXY_KEY:-НЕТ — будет только upload/тюнинг})"
+exec .venv/bin/python3 -m tools.studio_server --port "$PORT"
