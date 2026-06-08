@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>dropweb · симулятор темы</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.css" />
+<style>
+  /* App fonts pulled from dropweb-app/assets/fonts (exact bundled Onest + JetBrainsMono) */
+  @font-face{font-family:'Onest';src:url('fonts/Onest-Thin.ttf') format('truetype');font-weight:100;font-display:swap;}
+  @font-face{font-family:'Onest';src:url('fonts/Onest-Light.ttf') format('truetype');font-weight:300;font-display:swap;}
+  @font-face{font-family:'Onest';src:url('fonts/Onest-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
+  @font-face{font-family:'Onest';src:url('fonts/Onest-Medium.ttf') format('truetype');font-weight:500;font-display:swap;}
+  @font-face{font-family:'Onest';src:url('fonts/Onest-SemiBold.ttf') format('truetype');font-weight:600;font-display:swap;}
+  @font-face{font-family:'Onest';src:url('fonts/Onest-Bold.ttf') format('truetype');font-weight:700;font-display:swap;}
+  @font-face{font-family:'JetBrains Mono';src:url('fonts/JetBrainsMono-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
+  :root{
+    --accent:#15803d; --void:#030305; --on-primary:#ffffff;
+    --card-bg:rgba(255,255,255,0.03); --card-border:rgba(255,255,255,0.08);
+    --text:#e7e7ec; --text-dim:#9aa0aa;
+    --panel-bg:#0f0f13; --panel-line:rgba(255,255,255,0.08);
+    --phone-scale:1; /* set by JS on mobile; stays 1 on desktop */
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{font-family:'Onest',system-ui,sans-serif;color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
+  /* ---------- STAGE ---------- */
+  .stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-width:0;
+    background:radial-gradient(900px 600px at 50% 26%, rgba(255,255,255,0.02), transparent 60%), #0b0b0e; padding:24px;}
+  .phone{position:relative;width:390px;height:800px;max-height:calc(100vh - 48px);border-radius:46px;background:var(--void);overflow:hidden;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 0 0 11px #16161a,0 0 0 12px rgba(255,255,255,0.04),0 40px 90px -30px rgba(0,0,0,0.9);}
+  .mesh{position:absolute;inset:0;z-index:0;width:100%;height:100%;display:block;}
+  .statusbar{position:absolute;top:16px;left:0;right:0;display:flex;justify-content:space-between;padding:0 30px;font-size:13px;font-weight:600;color:var(--text);z-index:20;}
+  .dash{position:absolute;top:54px;left:16px;right:16px;z-index:5;}
+  .dash-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .greet{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+  .state-line{font-size:13px;color:var(--text-dim);margin-top:2px;}
+  .state-line.on{color:var(--accent);}
+  .avatar{width:40px;height:40px;border-radius:50%;background:var(--card-bg);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text);}
+  /* CommonCard (glass) */
+  .ccard{background:var(--card-bg);border:1px solid var(--card-border);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 18px 38px -28px rgba(0,0,0,0.8);}
+  .ccard-head{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);font-weight:600;margin-bottom:12px;}
+  .ccard-head .hi{width:18px;height:18px;border-radius:5px;background:color-mix(in srgb,var(--accent) 30%,transparent);flex:0 0 auto;}
+  /* metainfo */
+  .meta-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .plan{font-size:17px;font-weight:700;color:var(--text);}
+  .days{text-align:right;}
+  .days b{font-size:22px;font-weight:700;color:var(--accent);line-height:1;}
+  .days span{display:block;font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .meta-traffic{display:flex;justify-content:space-between;font-size:12px;color:var(--text);margin:14px 0 7px;}
+  .bar{height:8px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;}
+  .bar i{display:block;height:100%;width:38%;border-radius:6px;background:#4ade80;}
+  .meta-exp{font-size:11px;color:var(--text-dim);margin-top:12px;}
+  /* subscription card (faithful to MetainfoWidget, radius Lumina.radiusLg=24, pad 16) */
+  .card-wrap{position:absolute;top:64px;left:16px;right:16px;z-index:5;}
+  .ccard.sub{background:var(--card-bg);border:1px solid var(--card-border);border-radius:24px;padding:16px;box-shadow:0 22px 44px -30px rgba(0,0,0,0.85);}
+  .sub-head{display:flex;align-items:center;justify-content:space-between;}
+  .sub-title{font-size:26px;font-weight:300;letter-spacing:0.22em;color:var(--text);text-transform:uppercase;line-height:1.1;}
+  .sub-grid{color:var(--accent);width:28px;height:28px;flex:0 0 auto;}
+  .sub-grid svg{width:100%;height:100%;display:block;}
+  .sub-traffic{font-size:15px;color:var(--text);margin-top:14px;}
+  .sub-bar{height:6px;border-radius:10px;background:rgba(255,255,255,0.10);overflow:hidden;margin-top:8px;}
+  .sub-bar i{display:block;height:100%;width:1.5%;min-width:5px;background:#4caf50;border-radius:10px;}
+  .sub-exp{font-size:15px;color:var(--text);margin-top:14px;}
+  .sub-divider{height:1px;background:rgba(255,255,255,0.08);margin:12px 0;}
+  .sub-domain{font-size:14px;color:var(--text-dim);}
+  /* connect + nav */
+  .connect-wrap{position:absolute;left:50%;top:76%;transform:translate(-50%,-50%);z-index:10;}
+  .indicator{position:absolute;left:0;right:0;top:62%;transform:translateY(132px);display:flex;gap:7px;justify-content:center;z-index:11;}
+  .indicator i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.18);}
+  .indicator i.active{background:var(--accent);width:18px;border-radius:3px;box-shadow:0 0 10px var(--accent);}
+  .navbar{position:absolute;left:16px;right:16px;bottom:22px;height:70px;z-index:15;background:var(--card-bg);border:1px solid var(--card-border);border-radius:36px;display:flex;padding:6px;backdrop-filter:blur(8px);}
+  .navbar .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:30px;font-size:11px;color:var(--text-dim);}
+  .navbar .tab.active{color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent);}
+  .navbar .tab svg{width:23px;height:23px;}
+  /* ---------- PANEL · Lumina glass ----------
+     Native dropweb design language: frosted green glass on a dark green void.
+     Tokens from lib/common/lumina.dart. --accent-rgb (set by syncCssVars) lets
+     glows re-tint live with the accent/filter. luminaCurve = cubic-bezier(0.2,0.8,0.2,1). */
+  .panel{flex:0 0 360px;height:100vh;overflow-y:auto;padding:16px;
+    background:radial-gradient(ellipse 600px 400px at 85% -5%, rgba(21,128,61,0.12), transparent 60%), #030305;
+    border-left:1px solid rgba(255,255,255,0.06);
+    font-family:'Onest',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-size:12.5px;}
+  .panel h1{font-size:14px;font-weight:600;color:#e8e8ec;letter-spacing:-0.005em;}
+  .group{margin-bottom:11px;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:13px 14px;
+    background:rgba(255,255,255,0.03);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);box-shadow:0 10px 20px rgba(0,0,0,0.2);}
+  .group>h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);margin-bottom:9px;}
+  .row{margin-bottom:8px;} .row:last-child{margin-bottom:0;}
+  .row .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+  .row label{font-size:12.5px;font-weight:500;color:rgba(255,255,255,0.82);}
+  .row .num{font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);}
+  /* slider: 4px glass track, 14px accent thumb with soft glow */
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:999px;background:rgba(255,255,255,0.10);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px 0 rgba(var(--accent-rgb),0.5);transition:box-shadow .25s cubic-bezier(0.2,0.8,0.2,1);}
+  input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 14px 1px rgba(var(--accent-rgb),0.6);}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px 0 rgba(var(--accent-rgb),0.5);transition:box-shadow .25s cubic-bezier(0.2,0.8,0.2,1);}
+  input[type=range]::-moz-range-thumb:hover{box-shadow:0 0 14px 1px rgba(var(--accent-rgb),0.6);}
+  input[type=range]:focus-visible{outline:none;}
+  input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px rgba(var(--accent-rgb),0.35),0 0 12px 1px rgba(var(--accent-rgb),0.55);}
+  .colorrow{display:flex;align-items:center;gap:8px;width:100%;}
+  .swatches{display:flex;gap:6px;} .swatches button{width:20px;height:20px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);cursor:pointer;padding:0;transition:transform .25s cubic-bezier(0.2,0.8,0.2,1);}
+  .swatches button:hover{transform:scale(1.1);} .swatches button:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(var(--accent-rgb),0.5);}
+  .presets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
+  .preset{background:none;border:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:stretch;}
+  .pswatch{position:relative;aspect-ratio:2.0;border-radius:14px;border:1px solid rgba(255,255,255,0.10);display:flex;align-items:center;justify-content:center;transition:border-color .25s cubic-bezier(0.2,0.8,0.2,1),box-shadow .25s cubic-bezier(0.2,0.8,0.2,1);}
+  .preset.sel .pswatch{border:1.5px solid var(--accent);box-shadow:0 0 14px rgba(var(--accent-rgb),0.4);}
+  .preset:focus-visible{outline:none;} .preset:focus-visible .pswatch{box-shadow:0 0 0 2px rgba(var(--accent-rgb),0.5);}
+  .pswatch i{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.85);}
+  .pname{font-size:10.5px;color:rgba(255,255,255,0.55);text-align:center;}
+  .preset.sel .pname{color:#e8e8ec;font-weight:500;}
+  .toggle{display:flex;align-items:center;justify-content:space-between;}
+  /* switch: glass off track, accent+glow on, white knob, luminaCurve */
+  .switch{position:relative;width:34px;height:20px;border-radius:999px;background:rgba(255,255,255,0.10);cursor:pointer;transition:background .25s cubic-bezier(0.2,0.8,0.2,1),box-shadow .25s cubic-bezier(0.2,0.8,0.2,1);flex:0 0 auto;}
+  .switch.on{background:var(--accent);box-shadow:0 0 12px rgba(var(--accent-rgb),0.45);}
+  .switch i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(0.2,0.8,0.2,1);} .switch.on i{transform:translateX(14px);}
+  .switch:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(var(--accent-rgb),0.5);}
+  details.group>summary{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);cursor:pointer;list-style:none;margin-bottom:4px;}
+  details.group>summary::-webkit-details-marker{display:none;}
+  details.group[open]>summary{margin-bottom:9px;}
+  .btnrow{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;}
+  .btnrow button{flex:1 1 auto;min-width:90px;height:32px;padding:0 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.75);font-family:inherit;font-size:12.5px;font-weight:500;cursor:pointer;transition:background .25s cubic-bezier(0.2,0.8,0.2,1),color .25s cubic-bezier(0.2,0.8,0.2,1),box-shadow .25s cubic-bezier(0.2,0.8,0.2,1),border-color .25s cubic-bezier(0.2,0.8,0.2,1);}
+  .btnrow button:hover{background:rgba(255,255,255,0.07);}
+  .btnrow button:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(var(--accent-rgb),0.45);}
+  .btnrow button.primary{background:rgba(var(--accent-rgb),0.16);border:1px solid rgba(var(--accent-rgb),0.5);color:#eafff1;}
+  .btnrow button.primary:hover{background:rgba(var(--accent-rgb),0.26);box-shadow:0 0 14px rgba(var(--accent-rgb),0.35);}
+  .io-note{font-size:10.5px;color:rgba(255,255,255,0.42);margin-top:8px;line-height:1.4;} .io-err{color:#f08a8a;}
+  /* segmented filter (DynamicSchemeVariant) — glass container, accent .on */
+  .seg{display:flex;gap:2px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:3px;}
+  .seg button{flex:1 1 auto;min-width:0;height:24px;padding:0 4px;border:none;border-radius:9px;background:transparent;color:rgba(255,255,255,0.6);font-family:inherit;font-size:11.5px;font-weight:500;cursor:pointer;transition:background .25s cubic-bezier(0.2,0.8,0.2,1),color .25s cubic-bezier(0.2,0.8,0.2,1),box-shadow .25s cubic-bezier(0.2,0.8,0.2,1);white-space:nowrap;}
+  .seg button:hover{background:rgba(255,255,255,0.05);color:#fff;}
+  .seg button:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(var(--accent-rgb),0.45);}
+  .seg button.on{background:rgba(var(--accent-rgb),0.18);color:#fff;box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),0.5),0 0 10px rgba(var(--accent-rgb),0.25);}
+  /* Coloris hex fields — glass wrapper is the flexible box, input fills it */
+  .colorrow > .clr-field{flex:1 1 0;min-width:0;height:30px;display:block;position:relative;border:1px solid rgba(255,255,255,0.08);border-radius:12px;background:rgba(255,255,255,0.04);overflow:hidden;transition:border-color .25s cubic-bezier(0.2,0.8,0.2,1);}
+  .colorrow > .clr-field:focus-within{border-color:rgba(var(--accent-rgb),0.5);}
+  .colorrow input.clr-field{width:100%;height:100%;box-sizing:border-box;background:transparent;border:none;outline:none;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:rgba(255,255,255,0.85);padding:0 8px 0 32px;}
+  .colorrow > .clr-field button{position:absolute;left:7px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:6px;padding:0;}
+  #hdrInput{width:100%;height:32px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:0 10px;color:#9fe6bb;outline:none;transition:border-color .25s cubic-bezier(0.2,0.8,0.2,1),box-shadow .25s cubic-bezier(0.2,0.8,0.2,1);}
+  #hdrInput:focus{border-color:rgba(var(--accent-rgb),0.5);box-shadow:0 0 12px rgba(var(--accent-rgb),0.25);}
+  #hdrInput:focus{border-color:#2a2a30;}
+  /* ---------- RESPONSIVE (mobile/tablet ≤820px) ----------
+     Desktop (≥821px) stays the fixed 2-column layout untouched. Below 820px
+     the page stacks: phone preview on top (scaled to fit via --phone-scale,
+     set in JS), panel full-width below. transform is scoped INSIDE this query
+     so desktop never transforms. --phone-scale defaults to 1 (set on :root). */
+  @media (max-width:820px){
+    html,body{height:auto;}
+    body{flex-direction:column;height:auto;min-height:100vh;overflow-y:auto;}
+    .stage{flex:none;width:100%;padding:16px 0 8px;display:flex;align-items:flex-start;justify-content:center;
+      /* reserve the SCALED phone height so the panel below isn't overlapped */
+      height:calc(800px * var(--phone-scale));min-height:0;}
+    .phone{max-height:none;transform:scale(var(--phone-scale));transform-origin:top center;}
+    .panel{flex:none;width:100%;height:auto;max-height:none;border-left:none;border-top:1px solid rgba(255,255,255,0.06);overflow:visible;padding:16px 14px 40px;}
+    /* touch targets: bigger for fingers (desktop sizes unchanged) */
+    .row{margin-bottom:12px;}
+    .switch{width:40px;height:24px;} .switch i{width:18px;height:18px;top:3px;left:3px;} .switch.on i{transform:translateX(16px);}
+    input[type=range]{height:5px;} .row[data-slider]{padding:4px 0;}
+    input[type=range]::-webkit-slider-thumb{width:18px;height:18px;}
+    input[type=range]::-moz-range-thumb{width:18px;height:18px;}
+    .seg{flex-wrap:wrap;} .seg button{height:30px;font-size:12px;flex:1 1 auto;}
+    .colorrow > .clr-field{height:34px;}
+    .swatches button{width:24px;height:24px;}
+    .btnrow button{height:38px;}
+    #hdrInput{height:38px;}
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="phone">
+      <canvas id="meshCanvas" class="mesh"></canvas>
+      <div class="card-wrap">
+        <div class="ccard sub">
+          <div class="sub-head">
+            <div class="sub-title">DROPWEB</div>
+            <div class="sub-grid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7H20"/><path d="M4 12H20"/><path d="M4 17H20"/></svg></div>
+          </div>
+          <div class="sub-traffic">Трафик 768.25 MB / 250 GB</div>
+          <div class="sub-bar"><i></i></div>
+          <div class="sub-exp">Истекает 04.07.2026</div>
+          <div class="sub-divider"></div>
+          <div class="sub-domain">dropweb.org</div>
+        </div>
+      </div>
+      <div class="connect-wrap"><canvas id="btnCanvas"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="group">
+      <h2>Пресеты темы</h2>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="group">
+      <h2>Цвета темы</h2>
+      <div class="row">
+        <div class="top"><label>Фильтр (схема)</label></div>
+        <div class="seg" id="filterSeg">
+          <button data-filter="fidelity">Обычные</button>
+          <button data-filter="vibrant">Яркие</button>
+          <button data-filter="monochrome">Моно</button>
+          <button data-filter="neutral">Нейтр.</button>
+          <button data-filter="expressive">Выраз.</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="top"><label>Акцент (primary)</label></div>
+        <div class="colorrow">
+          <input type="text" data-color="accent" data-coloris value="#15803d" class="clr-field" spellcheck="false" />
+          <div class="swatches">
+            <button style="background:#15803d" data-swatch="accent" data-v="#15803d"></button>
+            <button style="background:#38bdf8" data-swatch="accent" data-v="#38bdf8"></button>
+            <button style="background:#a78bfa" data-swatch="accent" data-v="#a78bfa"></button>
+            <button style="background:#ef4444" data-swatch="accent" data-v="#ef4444"></button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="top"><label>Орб 1 · Орб 2</label></div>
+        <div class="colorrow">
+          <input type="text" data-color="orb1" data-coloris value="#009938" class="clr-field" spellcheck="false" />
+          <input type="text" data-color="orb2" data-coloris value="#2bff7a" class="clr-field" spellcheck="false" />
+        </div>
+      </div>
+      <div class="row" data-slider="orbBlur" data-min="1" data-max="5" data-step="1"></div>
+    </div>
+
+    <div class="group">
+      <h2>Хэдер темы</h2>
+      <input type="text" id="hdrInput" spellcheck="false" />
+      <div class="btnrow" style="margin-top:10px;"><button class="primary" id="copyBtn">Копировать</button><button id="resetBtn">Сбросить</button></div>
+      <div class="io-note" id="ioNote">Заголовок подписки dropweb-theme. Формат: filter,accent,orb1,orb2,blur</div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/gh/mdbassit/Coloris@latest/dist/coloris.min.js"></script>
+<script>
+"use strict";
+const LABELS={
+  orbBlur:"Размытие орбов (1-5)", glassOpacity:"Прозрачность стекла", glassBorder:"Граница стекла",
+  buttonSize:"Размер кнопки (px)", iconRatio:"Размер иконки (доля)", bodyRadius:"Радиус тела",
+  veilAlpha:"Вуаль", insetWidth:"Вогнутость: толщина", insetAlpha:"Вогнутость: затемнение",
+  specAlpha:"Блик: яркость", specWidth:"Блик: толщина",
+  innerIdle:"Внутр. свечение (покой)", innerRunning:"Внутр. свечение (вкл)", innerWidth:"Внутр. свечение: толщина",
+  rimMix:"Кромка: подмес акцента", rimBright:"Кромка: яркость",
+  haloIdle:"Halo иконки (покой)", haloRunning:"Halo иконки (вкл)",
+  outerIdle:"Внеш. свечение (покой)", outerRunning:"Внеш. свечение (вкл)", outerBlur:"Внеш. свечение: размытие",
+  irisPeak:"Iris: пик", irisSettled:"Iris: остаток",
+  iconStrokeWidth:"Обводка значка: толщина", iconStrokeBlur:"Обводка значка: размытие", iconStrokeAlpha:"Обводка значка: прозрачность",
+  ringsAlpha:"Кольца: яркость", ringsCycle:"Кольца: период (сек)"
+};
+const DEFAULTS={
+  running:true, pressed:false, hasProfile:true, ringsOn:false, pureBlack:true,
+  filter:"fidelity",
+  accent:"#15803d", orb1:"#009938", orb2:"#2bff7a", orbBlur:4,
+  glassOpacity:0.03, glassBorder:0.08,
+  bodyInner:"#15151d", bodyOuter:"#080810",
+  buttonSize:140, iconRatio:0.4, bodyRadius:1.6,
+  veilAlpha:0.19, insetWidth:0.21, insetAlpha:0.75,
+  specAlpha:0.12, specWidth:0.04,
+  innerIdle:0.055, innerRunning:0.205, innerWidth:0.12,
+  rimMix:0.41, rimBright:0.6,
+  haloIdle:0.07, haloRunning:0.28,
+  outerIdle:0.175, outerRunning:0.28, outerBlur:16,
+  irisPeak:0.34, irisSettled:0.18,
+  ringsAlpha:0.22, ringsCycle:14,
+  iconStrokeColor:"#000000", iconStrokeWidth:1, iconStrokeBlur:5.5, iconStrokeAlpha:0.72
+};
+const PRESETS=[
+  {name:"Emerald", accent:"#29ff76", orb1:"#009938", orb2:"#2bff7a"},
+  {name:"Frost",   accent:"#38bdf8", orb1:"#60a5fa", orb2:"#38bdf8"},
+  {name:"Amethyst",accent:"#a78bfa", orb1:"#8b5cf6", orb2:"#a855f7"},
+  {name:"Crimson", accent:"#ef4444", orb1:"#f87171", orb2:"#b91c1c"},
+  {name:"Amber",   accent:"#f59e0b", orb1:"#fbbf24", orb2:"#b45309"},
+  {name:"Stealth", accent:"#64748b", orb1:"#94a3b8", orb2:"#475569"}
+];
+const COLOR_KEYS=['accent','orb1','orb2','bodyInner','bodyOuter','iconStrokeColor'];
+let cfg={...DEFAULTS};
+let pressT=0, irisT=0, ringsOpacity=0;
+
+function hexToRgb(h){h=String(h).replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
+function rgba(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
+function mix(h1,h2,t){const a=hexToRgb(h1),b=hexToRgb(h2);const r=Math.round(a.r+(b.r-a.r)*t),g=Math.round(a.g+(b.g-a.g)*t),bl=Math.round(a.b+(b.b-a.b)*t);return `#${((1<<24)+(r<<16)+(g<<8)+bl).toString(16).slice(1)}`;}
+function mixA(h1,a1,h2,a2,t){const c1=hexToRgb(h1),c2=hexToRgb(h2);const r=Math.round(c1.r+(c2.r-c1.r)*t),g=Math.round(c1.g+(c2.g-c1.g)*t),b=Math.round(c1.b+(c2.b-c1.b)*t);const a=a1+(a2-a1)*t;return `rgba(${r},${g},${b},${a})`;}
+function lum(hex){const c=hexToRgb(hex);return (0.299*c.r+0.587*c.g+0.114*c.b)/255;}
+
+// ---- Material3 DynamicSchemeVariant filter (lib/common/color.dart) ----
+// HSL transform of a seed color per scheme variant. h in [0,360), s/l in [0,1].
+function hexToHsl(hex){
+  const c=hexToRgb(hex); const r=c.r/255,g=c.g/255,b=c.b/255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b); let h=0,s=0; const l=(max+min)/2;
+  const d=max-min;
+  if(d!==0){
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    if(max===r) h=((g-b)/d+(g<b?6:0));
+    else if(max===g) h=(b-r)/d+2;
+    else h=(r-g)/d+4;
+    h*=60;
+  }
+  return {h,s,l};
+}
+function hslToHex(h,s,l){
+  h=((h%360)+360)%360;
+  const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
+  else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+  const to=v=>Math.round((v+m)*255).toString(16).padStart(2,'0');
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+const clamp01=v=>Math.max(0,Math.min(1,v));
+// Mirrors applyColorFilter(base, variant): identity / sat*1.4 / sat 0 / sat*0.3 / hue+30.
+function applyFilter(hex,filter){
+  const {h,s,l}=hexToHsl(hex);
+  switch(filter){
+    case 'vibrant':     return hslToHex(h, clamp01(s*1.4), l);
+    case 'monochrome':  return hslToHex(h, 0, l);
+    case 'neutral':     return hslToHex(h, clamp01(s*0.3), l);
+    case 'expressive':  return hslToHex((h+30)%360, s, l);
+    case 'fidelity':
+    default:            return hex;
+  }
+}
+// Effective (rendered) colors — filtered seeds. The seeds (cfg.accent/orb1/
+// orb2) stay RAW; only rendering + the --accent var use these.
+function effAccent(){ return applyFilter(cfg.accent, cfg.filter); }
+function effOrb(key){ return applyFilter(cfg[key], cfg.filter); }
+
+const canvas=document.getElementById('btnCanvas');
+const ctx=canvas.getContext('2d');
+const LOGICAL=460;
+function sizeCanvas(){const dpr=window.devicePixelRatio||1;canvas.style.width=LOGICAL+'px';canvas.style.height=LOGICAL+'px';canvas.width=LOGICAL*dpr;canvas.height=LOGICAL*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+sizeCanvas(); window.addEventListener('resize',sizeCanvas);
+
+function clipCircle(cx,cy,r){ ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.clip(); }
+
+function draw(time){
+  ctx.clearRect(0,0,LOGICAL,LOGICAL);
+  const cx=LOGICAL/2, cy=LOGICAL/2;
+  const r=cfg.buttonSize/2;
+  const accent=effAccent(); // filtered theme primary (lens follows the variant)
+  const running=cfg.running;
+
+  // magic rings (behind), only when running
+  if(cfg.ringsOn && ringsOpacity>0.001){
+    const maxRadius=Math.min(200, r+150);
+    const prog=(time/1000/cfg.ringsCycle)%1;
+    ctx.save();
+    for(let i=0;i<2;i++){
+      const phase=(prog+i/2)%1;
+      const rad=phase*maxRadius, fade=1-phase;
+      const a=fade*fade*cfg.ringsAlpha*ringsOpacity;
+      if(a<0.003) continue;
+      const sw=1.2*(1-phase*0.5);
+      ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2);
+      ctx.lineWidth=sw; ctx.strokeStyle=rgba(accent,a); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // outer perimeter halo
+  const outerBase = running ? cfg.outerRunning : cfg.outerIdle;
+  const haloAlpha = outerBase + pressT*0.18;
+  const haloBlur = cfg.outerBlur + pressT*10;
+  ctx.save();
+  const og=ctx.createRadialGradient(cx,cy,r*0.85, cx,cy,r+haloBlur);
+  og.addColorStop(0, rgba(accent,haloAlpha));
+  og.addColorStop(0.6, rgba(accent,haloAlpha*0.5));
+  og.addColorStop(1, rgba(accent,0));
+  ctx.fillStyle=og; ctx.beginPath(); ctx.arc(cx,cy,r+haloBlur,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // dark depth shadows under lens (dark mode _ConnectCircle.boxShadow):
+  //   BoxShadow(0x99000000, blur 4, offset(0,1))             — tight contact
+  //   BoxShadow(0x66000000, blur 26, spread -6, offset(0,14)) — drop shadow
+  // Canvas shadowBlur has no spread; emulate spread -6 by casting from r-6.
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=26; ctx.shadowOffsetY=14;
+  ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(cx,cy,Math.max(0,r-6),0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.6)'; ctx.shadowBlur=4; ctx.shadowOffsetY=1;
+  ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 1. BODY
+  ctx.save();
+  const byc=cy+0.25*r, bodyR=cfg.bodyRadius*r;
+  const bg=ctx.createRadialGradient(cx,byc,0, cx,byc,bodyR);
+  bg.addColorStop(0,cfg.bodyInner); bg.addColorStop(0.55,cfg.bodyInner); bg.addColorStop(1,cfg.bodyOuter);
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 2. ACCENT VEIL
+  ctx.save(); clipCircle(cx,cy,r);
+  const vyc=cy-0.15*r;
+  const vg=ctx.createRadialGradient(cx,vyc,0, cx,vyc,0.9*r);
+  vg.addColorStop(0,rgba(accent,cfg.veilAlpha));
+  vg.addColorStop(0.55,rgba(accent,cfg.veilAlpha*0.38));
+  vg.addColorStop(1,rgba(accent,0));
+  ctx.fillStyle=vg; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 3. CONCAVE INSET (dark bottom arc, blurred)
+  if(cfg.insetWidth>0 && cfg.insetAlpha>0){
+    ctx.save(); clipCircle(cx,cy,r-1);
+    ctx.filter=`blur(${0.045*r}px)`;
+    const cg=ctx.createConicGradient(-Math.PI/2,cx,cy);
+    cg.addColorStop(0,'rgba(0,0,0,0)'); cg.addColorStop(0.08,'rgba(0,0,0,0)');
+    cg.addColorStop(0.5,rgba('#000000',cfg.insetAlpha));
+    cg.addColorStop(0.92,'rgba(0,0,0,0)'); cg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.strokeStyle=cg; ctx.lineWidth=cfg.insetWidth*r;
+    ctx.beginPath(); ctx.arc(cx,cy,r-0.085*r,0,Math.PI*2); ctx.stroke();
+    ctx.filter='none'; ctx.restore();
+  }
+
+  // 4. TOP SPECULAR ARC
+  if(cfg.specAlpha>0){
+    ctx.save(); ctx.filter=`blur(${0.04*r}px)`;
+    ctx.strokeStyle=rgba('#ffffff',cfg.specAlpha);
+    ctx.lineWidth=cfg.specWidth*r; ctx.lineCap='round';
+    ctx.beginPath(); ctx.arc(cx,cy+0.025*r,r-0.045*r,-Math.PI*0.78,-Math.PI*0.78+Math.PI*0.55);
+    ctx.stroke(); ctx.filter='none'; ctx.restore();
+  }
+
+  // 5. INNER EDGE GLOW
+  const innerAlpha=(running?cfg.innerRunning:cfg.innerIdle)+pressT*0.16;
+  if(innerAlpha>0.005){
+    ctx.save(); clipCircle(cx,cy,r);
+    ctx.filter=`blur(${0.055*r}px)`;
+    ctx.strokeStyle=rgba(accent,innerAlpha); ctx.lineWidth=cfg.innerWidth*r;
+    ctx.beginPath(); ctx.arc(cx,cy,r-0.035*r,0,Math.PI*2); ctx.stroke();
+    ctx.filter='none'; ctx.restore();
+  }
+
+  // 5b. IRIS BLOOM
+  if(irisT>0.001){
+    const settled=cfg.irisSettled, peak=cfg.irisPeak;
+    const overshoot=(peak-settled)*4*irisT*(1-irisT);
+    const irisAlpha=Math.max(0,Math.min(1, settled*irisT+overshoot));
+    if(irisAlpha>0.001){
+      ctx.save(); clipCircle(cx,cy,r);
+      const ig=ctx.createRadialGradient(cx,cy,0, cx,cy,r);
+      ig.addColorStop(0,rgba(accent,irisAlpha));
+      ig.addColorStop(0.55,rgba(accent,irisAlpha*0.4));
+      ig.addColorStop(1,rgba(accent,0));
+      ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // 6. FRESNEL RIM
+  const rimTop=mixA('#ffffff',cfg.rimBright, accent,0.35, cfg.rimMix);
+  const rimSide=mixA('#ffffff',0.14, accent,0.18, cfg.rimMix*0.9);
+  const rimBottom=rgba('#ffffff',0.05);
+  const warmTop=pressT>0?mixA('#ffffff',cfg.rimBright, accent,0.60, Math.min(1,cfg.rimMix+pressT*0.6)):rimTop;
+  const warmSide=pressT>0?mixA('#ffffff',0.14, accent,0.30, Math.min(1,cfg.rimMix+pressT*0.45)):rimSide;
+  ctx.save();
+  const rg=ctx.createConicGradient(-Math.PI/2,cx,cy);
+  rg.addColorStop(0,warmTop); rg.addColorStop(0.25,warmSide); rg.addColorStop(0.5,rimBottom);
+  rg.addColorStop(0.75,warmSide); rg.addColorStop(1,warmTop);
+  ctx.strokeStyle=rg; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,r-0.5,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  // 7. ICON HALO
+  const haloIcon=(running?cfg.haloRunning:cfg.haloIdle)+pressT*0.10;
+  if(haloIcon>0.001){
+    ctx.save();
+    const hr=r*0.46;
+    const hg=ctx.createRadialGradient(cx,cy,0, cx,cy,hr);
+    hg.addColorStop(0,rgba(accent,haloIcon)); hg.addColorStop(1,rgba(accent,0));
+    ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(cx,cy,hr,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  drawPowerIcon(cx,cy,r);
+}
+
+// Реальные SVG-пути HugeIcons (viewBox 24×24), ровно как в приложении:
+// strokeRoundedPower (StartButton, есть профиль) и
+// strokeRoundedAddCircleHalfDot (нет профиля). strokeWidth приложение
+// переопределяет на 2.0 (3.0 при нажатии); round cap/join.
+const ICON_VB=24;
+const POWER_PATHS=[
+  new Path2D('M18.7083 6C20.1334 7.59227 21 9.69494 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 9.69494 3.86656 7.59227 5.29168 6'),
+  new Path2D('M12 3V12'),
+];
+const ADD_PATHS=[
+  new Path2D('M12 2.00012C17.5228 2.00012 22 6.47727 22 12.0001C22 17.523 17.5228 22.0001 12 22.0001C6.47715 22.0001 2 17.523 2 12.0001M8.909 2.48699C7.9 2.8146 6.96135 3.29828 6.12153 3.90953M3.90943 6.12162C3.29806 6.9616 2.81432 7.90044 2.4867 8.90964'),
+  new Path2D('M12 8.00012V16.0001M16 12.0001L8 12.0001'),
+];
+
+// Рисует набор Path2D (24-viewBox) масштабом к display-размеру s, центрируя
+// в уже сдвинутом в центр контексте. lineWidth/blur — в display-px (контекст
+// без scale), поэтому ползунки обводки в px интуитивны.
+function drawGlyphPaths(paths, s, lineWidth, strokeStyle, blurPx){
+  const k=s/ICON_VB;
+  const m=new DOMMatrix();
+  m.scaleSelf(k,k); m.translateSelf(-12,-12); // p(viewBox) -> (p-12)*k
+  ctx.save();
+  if(blurPx>0) ctx.filter=`blur(${blurPx}px)`;
+  ctx.strokeStyle=strokeStyle; ctx.lineWidth=lineWidth;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  for(const bp of paths){ const tp=new Path2D(); tp.addPath(bp,m); ctx.stroke(tp); }
+  ctx.restore();
+}
+
+function drawPowerIcon(cx,cy,r){
+  const iconSize=cfg.buttonSize*cfg.iconRatio;
+  const iconScale=(cfg.hasProfile && !cfg.running)?0.94:1.0; // покой: лёгкое сжатие
+  const s=iconSize*iconScale;
+  const color=(!cfg.hasProfile||cfg.running)?cfg.accent:mix('#15151d',cfg.accent,0.28);
+  const k=s/ICON_VB;
+  const baseLW=(pressT>0?3.0:2.0)*k; // strokeWidth приложения в viewBox-единицах
+  const paths=cfg.hasProfile?POWER_PATHS:ADD_PATHS;
+  ctx.save(); ctx.translate(cx,cy);
+  // Обводка/свечение: тот же путь толще + blur, ПОД основным значком.
+  if(cfg.iconStrokeAlpha>0 && cfg.iconStrokeWidth>0){
+    drawGlyphPaths(paths, s, baseLW+cfg.iconStrokeWidth*2, rgba(cfg.iconStrokeColor,cfg.iconStrokeAlpha), cfg.iconStrokeBlur);
+  }
+  drawGlyphPaths(paths, s, baseLW, color, 0);
+  ctx.restore();
+}
+
+// click on the canvas toggles press for quick feel
+canvas.addEventListener('pointerdown',()=>{ cfg.pressed=true; syncTogControls(); });
+window.addEventListener('pointerup',()=>{ if(cfg.pressed){ cfg.pressed=false; syncTogControls(); } });
+
+
+
+// ---- mesh canvas (3 breathing radial orbs, from mesh_background.dart) ----
+// Rendered on a real canvas so the orb fade matches Skia: Flutter's
+// RadialGradient toward Colors.transparent fades to transparent BLACK in
+// straight sRGB. CSS `transparent` keyword fades in PREMULTIPLIED space
+// (green hue preserved, slower falloff) — the wrong look. Canvas 2D with an
+// `rgba(0,0,0,0)` end stop reproduces Skia exactly.
+const MESH_W=390, MESH_H=800, MESH_SHORTEST=Math.min(MESH_W,MESH_H); // 390
+// [centerX, centerY, radiusFraction, baseAlpha, colorKey] — order matches
+// mesh_background.dart's 3 stacked Positioned.fill DecoratedBoxes:
+//   topLeft 1.7 orbA 0.28 | topRight 1.6 orbA 0.20 | bottomRight 1.9 orbB 0.32
+const MESH_ORBS=[
+  [0,      0,      1.7, 0.28, 'orb1'],
+  [MESH_W, 0,      1.6, 0.20, 'orb1'],
+  [MESH_W, MESH_H, 1.9, 0.32, 'orb2'],
+];
+const meshCanvas=document.getElementById('meshCanvas');
+const meshCtx=meshCanvas.getContext('2d');
+function sizeMesh(){
+  const dpr=window.devicePixelRatio||1;
+  meshCanvas.width=MESH_W*dpr; meshCanvas.height=MESH_H*dpr;
+  meshCtx.setTransform(dpr,0,0,dpr,0,0);
+}
+sizeMesh(); window.addEventListener('resize',sizeMesh);
+function drawMesh(time){
+  // 1. void background behind the orbs (Lumina.void_ / pureBlack)
+  meshCtx.clearRect(0,0,MESH_W,MESH_H);
+  meshCtx.fillStyle=cfg.pureBlack?'#000000':'#030305';
+  meshCtx.fillRect(0,0,MESH_W,MESH_H);
+  // 2. sharpness = middle stop; breathing = ±18% over a 14s loop, 120° apart
+  const S=Math.max(0,Math.min(0.95,(5-cfg.orbBlur)/8));
+  const ang=((time/1000/14)%1)*2*Math.PI;
+  const ph=[Math.sin(ang),Math.sin(ang+2*Math.PI/3),Math.sin(ang+4*Math.PI/3)];
+  // 3. stack orbs source-over (like Flutter's stacked DecoratedBoxes)
+  for(let i=0;i<3;i++){
+    const o=MESH_ORBS[i];
+    const a=Math.max(0,Math.min(1,o[3]*(1+ph[i]*0.18)));
+    const cx=o[0], cy=o[1], R=o[2]*MESH_SHORTEST; // 663 / 624 / 741
+    const c=rgba(effOrb(o[4]),a); // filtered orb seed (mesh follows the variant)
+    const g=meshCtx.createRadialGradient(cx,cy,0, cx,cy,R);
+    g.addColorStop(0,c);
+    g.addColorStop(S,c);
+    g.addColorStop(1,'rgba(0,0,0,0)'); // transparent BLACK == Colors.transparent
+    meshCtx.fillStyle=g;
+    meshCtx.fillRect(0,0,MESH_W,MESH_H);
+  }
+}
+
+let last=performance.now();
+function approach(c,t,dt,tau){const k=1-Math.exp(-dt/tau);return c+(t-c)*k;}
+function loop(t){
+  const dt=Math.min(64,t-last); last=t;
+  pressT=approach(pressT,cfg.pressed?1:0,dt,90);
+  irisT=approach(irisT,cfg.running?1:0,dt,160);
+  ringsOpacity=approach(ringsOpacity,(cfg.running&&cfg.ringsOn)?1:0,dt,300);
+  drawMesh(t); draw(t);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function syncCssVars(){
+  const r=document.documentElement.style;
+  const ea=effAccent();
+  r.setProperty('--accent',ea);
+  // --accent-rgb lets the glass panel CSS do rgba(var(--accent-rgb), X) for
+  // live-tinted glows that re-tint when the accent/filter changes.
+  const erc=hexToRgb(ea);
+  r.setProperty('--accent-rgb',`${erc.r},${erc.g},${erc.b}`);
+  r.setProperty('--void',cfg.pureBlack?'#000000':'#030305');
+  r.setProperty('--card-bg',`rgba(255,255,255,${cfg.glassOpacity})`);
+  r.setProperty('--card-border',`rgba(255,255,255,${cfg.glassBorder})`);
+  r.setProperty('--on-primary', lum(ea)>0.62?'#0a0a0a':'#ffffff');
+  const sl=document.getElementById('stateLine');
+  if(sl){sl.textContent=cfg.running?'Подключено':(cfg.hasProfile?'Отключено':'Добавьте профиль');sl.classList.toggle('on',cfg.running);}
+  syncPresetSel();
+}
+
+// presets
+function buildPresets(){
+  const wrap=document.getElementById('presets');
+  PRESETS.forEach((p,idx)=>{
+    const b=document.createElement('button'); b.className='preset'; b.dataset.idx=idx;
+    b.innerHTML=`<span class="pswatch" style="background:linear-gradient(135deg,${p.orb1},${p.accent},${p.orb2})"><i style="background:${p.accent}"></i></span><span class="pname">${p.name}</span>`;
+    b.addEventListener('click',()=>{
+      cfg.accent=p.accent; cfg.orb1=p.orb1; cfg.orb2=p.orb2;
+      setColorField('accent',p.accent);
+      setColorField('orb1',p.orb1);
+      setColorField('orb2',p.orb2);
+      syncCssVars(); updateHeader();
+    });
+    wrap.appendChild(b);
+  });
+}
+function syncPresetSel(){
+  document.querySelectorAll('.preset').forEach(b=>{
+    const p=PRESETS[+b.dataset.idx];
+    const eq=(x,y)=>x.toLowerCase()===y.toLowerCase();
+    b.classList.toggle('sel', eq(p.accent,cfg.accent)&&eq(p.orb1,cfg.orb1)&&eq(p.orb2,cfg.orb2));
+  });
+}
+
+// sliders
+document.querySelectorAll('[data-slider]').forEach(row=>{
+  const key=row.dataset.slider;
+  row.innerHTML=`<div class="top"><label>${LABELS[key]||key}</label><span class="num" id="num-${key}"></span></div>
+    <input type="range" min="${row.dataset.min}" max="${row.dataset.max}" step="${row.dataset.step}" value="${cfg[key]}" data-key="${key}" aria-label="${LABELS[key]||key}" />`;
+  const inp=row.querySelector('input');
+  inp.addEventListener('input',()=>{cfg[key]=parseFloat(inp.value);refreshNum(key);updateHeader();});
+});
+function refreshNum(key){const el=document.getElementById('num-'+key);if(!el)return;let v=cfg[key];el.textContent=(Math.abs(v)<1&&v!==0)?v.toFixed(3).replace(/0+$/,'').replace(/\.$/,''):(Number.isInteger(v)?v:v.toFixed(2));}
+
+// toggles
+function syncTogControls(){document.querySelectorAll('[data-tog]').forEach(sw=>sw.classList.toggle('on',cfg[sw.dataset.tog]));syncCssVars();}
+document.querySelectorAll('[data-tog]').forEach(sw=>{const key=sw.dataset.tog;sw.classList.toggle('on',cfg[key]);sw.addEventListener('click',()=>{cfg[key]=!cfg[key];sw.classList.toggle('on',cfg[key]);syncCssVars();updateHeader();});});
+
+// colors — Coloris turns [data-coloris] text fields into swatch+hex inputs and
+// dispatches a native 'input' event on change, so this handler still fires.
+function normHex(v){v=String(v).trim().replace('#','');if(v.length===3)v=v.split('').map(c=>c+c).join('');return /^[0-9a-fA-F]{6}$/.test(v)?('#'+v.toLowerCase()):null;}
+// Set a color field value AND notify Coloris (updates its thumbnail) + cfg.
+function setColorField(key,hex){
+  const inp=document.querySelector(`[data-color="${key}"]`);
+  if(!inp)return; inp.value=hex; inp.dispatchEvent(new Event('input',{bubbles:true}));
+}
+document.querySelectorAll('[data-color]').forEach(inp=>{const key=inp.dataset.color;inp.value=cfg[key];inp.addEventListener('input',()=>{const h=normHex(inp.value);if(h){cfg[key]=h;syncCssVars();updateHeader();}});});
+document.querySelectorAll('[data-swatch]').forEach(b=>{b.addEventListener('click',()=>{const key=b.dataset.swatch;cfg[key]=b.dataset.v;setColorField(key,b.dataset.v);syncCssVars();updateHeader();});});
+
+// filter segmented control
+function syncFilterSeg(){document.querySelectorAll('#filterSeg button').forEach(b=>b.classList.toggle('on',b.dataset.filter===cfg.filter));}
+document.querySelectorAll('#filterSeg button').forEach(b=>{b.addEventListener('click',()=>{cfg.filter=b.dataset.filter;syncFilterSeg();syncCssVars();updateHeader();});});
+
+function applyConfigToControls(){
+  document.querySelectorAll('[data-slider] input').forEach(inp=>{inp.value=cfg[inp.dataset.key];refreshNum(inp.dataset.key);});
+  document.querySelectorAll('[data-color]').forEach(inp=>setColorField(inp.dataset.color,cfg[inp.dataset.color]));
+  document.querySelectorAll('[data-tog]').forEach(sw=>sw.classList.toggle('on',cfg[sw.dataset.tog]));
+  syncFilterSeg();
+  syncCssVars();
+}
+
+// ---- dropweb-theme header (lib/controller.dart _applyDropwebTheme) ----
+// Format: filter,accentHex,orb1Hex,orb2Hex,blur  (hex uppercase WITH #, blur int)
+const hdrInput=document.getElementById('hdrInput'), ioNote=document.getElementById('ioNote');
+const FILTERS=['fidelity','vibrant','monochrome','neutral','expressive'];
+function buildHeader(){
+  return `${cfg.filter},${cfg.accent.toUpperCase()},${cfg.orb1.toUpperCase()},${cfg.orb2.toUpperCase()},${Math.round(cfg.orbBlur)}`;
+}
+function updateHeader(){ if(document.activeElement!==hdrInput) hdrInput.value=buildHeader(); }
+function applyHeader(str){
+  try{
+    const parts=str.split(',').map(s=>s.trim());
+    // parts[0]=filter (lowercase, must match), else keep current
+    if(parts.length>0&&parts[0]!==''){const f=parts[0].toLowerCase();if(FILTERS.includes(f))cfg.filter=f;}
+    // parts[1..3]=accent/orb1/orb2 hex (empty=keep)
+    const keys=['accent','orb1','orb2'];
+    for(let i=0;i<3;i++){const p=parts[i+1];if(p!==undefined&&p!==''){const h=normHex(p);if(h)cfg[keys[i]]=h;}}
+    // parts[4]=blur clamp(1,5) rounded (empty=keep)
+    if(parts.length>4&&parts[4]!==''){const n=parseFloat(parts[4]);if(Number.isFinite(n))cfg.orbBlur=Math.round(Math.max(1,Math.min(5,n)));}
+    applyConfigToControls(); updateHeader();
+    ioNote.classList.remove('io-err'); ioNote.textContent='Применено.';
+  }catch(e){ ioNote.classList.add('io-err'); ioNote.textContent='Ошибка хэдера: '+e.message; }
+}
+hdrInput.addEventListener('input',()=>applyHeader(hdrInput.value));
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  navigator.clipboard.writeText(buildHeader()).then(()=>{const b=document.getElementById('copyBtn'),o=b.textContent;b.textContent='Скопировано ✓';setTimeout(()=>b.textContent=o,1200);});
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{cfg={...DEFAULTS};applyConfigToControls();updateHeader();ioNote.classList.remove('io-err');ioNote.textContent='Сброшено к дефолту.';});
+
+// ---- Coloris (hex color picker) ----
+if(window.Coloris){
+  Coloris({el:'[data-coloris]',themeMode:'dark',format:'hex',alpha:false,
+    swatches:['#15803D','#29FF76','#009938','#2BFF7A','#38BDF8','#A78BFA','#EF4444','#F59E0B']});
+}
+
+// --- responsive phone-preview scaling ---
+// Scale the whole 390x800 .phone (≈414 incl. frame rings) to fit narrow
+// viewports. CSS reserves the scaled height on .stage so the panel doesn't
+// overlap. Only the transform (scoped to the ≤820px media query) consumes
+// this; desktop keeps --phone-scale at 1. rAF-debounced on resize so rotation
+// / width changes update live. Canvas internal resolution + rAF loop untouched.
+let _phoneScaleRaf=0;
+function updatePhoneScale(){
+  const vw=window.innerWidth||document.documentElement.clientWidth||390;
+  const s=Math.max(0.62, Math.min(1, (Math.min(vw,460)-32)/414));
+  document.documentElement.style.setProperty('--phone-scale', s.toFixed(4));
+}
+function schedulePhoneScale(){ if(_phoneScaleRaf) return; _phoneScaleRaf=requestAnimationFrame(()=>{_phoneScaleRaf=0;updatePhoneScale();}); }
+updatePhoneScale();
+window.addEventListener('resize', schedulePhoneScale);
+
+// init
+buildPresets();
+document.querySelectorAll('[data-slider]').forEach(r=>refreshNum(r.dataset.slider));
+syncFilterSeg();
+syncCssVars(); updateHeader();
+
+// --- a11y labels (controls without intrinsic names) ---
+(function(){
+  document.querySelectorAll('[data-swatch]').forEach(b=>b.setAttribute('aria-label','Установить цвет '+b.dataset.v));
+  document.querySelectorAll('[data-color]').forEach(i=>i.setAttribute('aria-label','Hex '+i.dataset.color));
+  document.querySelectorAll('[data-tog]').forEach(sw=>{
+    const lbl=sw.parentElement&&sw.parentElement.querySelector('label');
+    sw.setAttribute('role','switch');
+    sw.setAttribute('tabindex','0');
+    sw.setAttribute('aria-label',(lbl?lbl.textContent.trim():sw.dataset.tog));
+    sw.setAttribute('aria-checked', sw.classList.contains('on')?'true':'false');
+    sw.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); sw.click(); } });
+  });
+  const hdr=document.getElementById('hdrInput'); if(hdr) hdr.setAttribute('aria-label','Заголовок темы dropweb-theme');
+  document.querySelectorAll('#filterSeg button').forEach(b=>{ if(!b.getAttribute('aria-label')) b.setAttribute('aria-label','Фильтр: '+b.textContent.trim()); });
+  // Coloris generates its own thumbnail buttons after init
+  setTimeout(()=>document.querySelectorAll('.clr-field button').forEach(b=>{ if(!b.getAttribute('aria-label')) b.setAttribute('aria-label','Открыть палитру'); }),400);
+})();
+
+// keep aria-checked synced
+(function(){const _u=()=>document.querySelectorAll('[data-tog]').forEach(sw=>sw.setAttribute('aria-checked',sw.classList.contains('on')?'true':'false'));document.querySelectorAll('[data-tog]').forEach(sw=>sw.addEventListener('click',()=>setTimeout(_u,0)));})();
+
+</script>
+</body>
+</html>
