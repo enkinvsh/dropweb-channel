@@ -1,0 +1,487 @@
+{
+  "meta": {
+    "pack": "dropweb",
+    "spec": "telegram-custom-emoji-webm",
+    "size": 100,
+    "fps": 30,
+    "max_seconds": 3,
+    "max_kb": 256,
+    "default_color": "#00DE52",
+    "void_bg": "#030305"
+  },
+  "theme_cycle": [
+    "#00DE52",
+    "#38BDF8",
+    "#A78BFA",
+    "#EF4444",
+    "#F59E0B",
+    "#64748B"
+  ],
+  "emoji": [
+    {
+      "id": "db",
+      "anchor": "💚",
+      "label": "brand mark",
+      "source": "png",
+      "anim": "bpm_jump",
+      "asset": "assets/logo/icon_white.png",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "new",
+      "anchor": "🆕",
+      "label": "release",
+      "source": "text",
+      "anim": "bpm_jump",
+      "glyph": "NEW",
+      "tgs": {
+        "preset": "type_in",
+        "params": {
+          "stagger": 7
+        }
+      }
+    },
+    {
+      "id": "on",
+      "anchor": "🟢",
+      "label": "connected",
+      "source": "text",
+      "glyph": "ON",
+      "anim": "power_on",
+      "tgs": {
+        "preset": "sequential_glow",
+        "params": {
+          "stagger": 8
+        }
+      }
+    },
+    {
+      "id": "brain",
+      "anchor": "🧠",
+      "label": "smart core",
+      "source": "gen",
+      "anim": "stretch_pulse",
+      "prompt": "minimal monochrome white pixel-art HUMAN BRAIN anatomical lateral side profile, facing right, visible cerebrum folds and brain stem, not a walnut, centered, pure black background, no color, no text",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "shield",
+      "anchor": "🛡",
+      "label": "TLS Fragment",
+      "source": "gen",
+      "prompt": "minimal clean white shield icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "stretch_pulse",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "think",
+      "anchor": "🤔",
+      "label": "smart server",
+      "source": "text_states",
+      "anim": "crt_refresh",
+      "transition": "crossfade",
+      "states": [
+        "•",
+        "• •",
+        "• • •"
+      ],
+      "tgs": {
+        "preset": "type_in",
+        "params": {
+          "stagger": 8
+        }
+      }
+    },
+    {
+      "id": "monitor",
+      "anchor": "🖥",
+      "label": "servers",
+      "source": "gen_states",
+      "anim": "sequence",
+      "transition": "wipe",
+      "states": [
+        "clean white computer monitor with a blank dark screen icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, centered, pure black background, no text",
+        "keep the EXACT same icon, same position, smooth vector style, no pixels, no blocky edges, only change: fill the screen with smooth scanlines",
+        "keep the EXACT same icon, same position, smooth vector style, no pixels, no blocky edges, only change: show a waveform and bars on the screen"
+      ],
+      "chain": true,
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "palette",
+      "anchor": "🎨",
+      "label": "theme",
+      "source": "gen",
+      "prompt": "minimal clean white artist paint palette with paint blobs icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "color_cycle2",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "signal",
+      "anchor": "📶",
+      "label": "failover pool",
+      "source": "shape",
+      "anim": "left_reveal",
+      "shape": "bars",
+      "tgs": {
+        "preset": "stagger_rise",
+        "params": {
+          "stagger": 6,
+          "rise": 60
+        }
+      }
+    },
+    {
+      "id": "doc",
+      "anchor": "📄",
+      "label": "docs",
+      "source": "gen",
+      "prompt": "minimal clean white document page with horizontal text lines icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "vertical_wrap",
+      "tgs": {
+        "preset": "stagger_rise",
+        "params": {
+          "stagger": 7,
+          "rise": 40
+        }
+      }
+    },
+    {
+      "id": "download",
+      "anchor": "⬇️",
+      "label": "download",
+      "source": "shape",
+      "anim": "download_drop",
+      "shape": "arrow_down",
+      "tgs": {
+        "preset": "assemble_in",
+        "params": {}
+      }
+    },
+    {
+      "id": "penguin",
+      "anchor": "🐧",
+      "label": "Linux",
+      "source": "gen",
+      "prompt": "minimal clean white cute sitting penguin Linux Tux mascot icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "bpm_scale",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "heart",
+      "anchor": "❤️",
+      "label": "donate",
+      "source": "gen",
+      "prompt": "minimal clean white heart icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "stretch_pulse",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "star",
+      "anchor": "⭐",
+      "label": "github star",
+      "source": "gen",
+      "prompt": "minimal clean white five pointed star icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "stretch_pulse",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "off",
+      "anchor": "🔴",
+      "label": "отключено",
+      "source": "text",
+      "glyph": "OFF",
+      "anim": "power_off",
+      "tgs": {
+        "preset": "sequential_glow",
+        "params": {
+          "stagger": 8
+        }
+      }
+    },
+    {
+      "id": "apple",
+      "anchor": "🍎",
+      "label": "macOS",
+      "source": "gen",
+      "prompt": "minimal monochrome white blocky ASCII-style Apple logo (bitten apple) icon, terminal text-mode, thick pixel strokes, centered, pure black background, no color, no text",
+      "anim": "bpm_scale",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "windows",
+      "anchor": "🪟",
+      "label": "Windows",
+      "source": "gen",
+      "prompt": "minimal clean white Windows logo with four panes icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "bpm_scale",
+      "tgs": {
+        "preset": "sequential_glow",
+        "params": {
+          "stagger": 8
+        }
+      }
+    },
+    {
+      "id": "android",
+      "anchor": "🤖",
+      "label": "Android",
+      "source": "gen",
+      "prompt": "minimal monochrome white blocky ASCII-style Android robot (bugdroid) head icon, terminal text-mode, thick pixel strokes, centered, pure black background, no color, no text",
+      "anim": "bpm_scale",
+      "tgs": {
+        "preset": "sequential_glow",
+        "params": {
+          "stagger": 7
+        }
+      }
+    },
+    {
+      "id": "ios",
+      "anchor": "📱",
+      "label": "iOS",
+      "source": "text",
+      "anim": "bpm_scale",
+      "glyph": "iOS",
+      "tgs": {
+        "preset": "type_in",
+        "params": {
+          "stagger": 7
+        }
+      }
+    },
+    {
+      "id": "update",
+      "anchor": "🔄",
+      "label": "обновление",
+      "source": "gen",
+      "prompt": "minimal monochrome white blocky ASCII-style two circular refresh arrows forming a circle icon, terminal text-mode, thick pixel strokes, centered, pure black background, no color, no text",
+      "anim": "rotate_reverse",
+      "tgs": {
+        "preset": "segment_rebuild",
+        "params": {
+          "stagger": 6,
+          "turn": 30
+        }
+      }
+    },
+    {
+      "id": "spider",
+      "anchor": "🕷️",
+      "label": "spider",
+      "source": "gen",
+      "anim": "bpm_scale",
+      "color": "#00DE52",
+      "fit": 0.84,
+      "prompt": "monochrome white elegant thin spider hanging from a single web thread, long graceful legs, minimal but scary, centered, pure black background, no text",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "fire",
+      "anchor": "🔥",
+      "label": "огонь",
+      "source": "gen",
+      "anim": "wave",
+      "prompt": "minimal monochrome white blocky pixel-art flame fire icon, glowing, centered, pure black background, no color, no text",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "ahah",
+      "anchor": "😂",
+      "label": "смех",
+      "source": "gen_states",
+      "anim": "sequence",
+      "transition": "crossfade",
+      "states": [
+        "clean white round smiling face icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, centered, pure black background, no text",
+        "keep the EXACT same icon, same position, smooth vector style, no pixels, no blocky edges, only change: open the mouth wide laughing, squinted happy eyes"
+      ],
+      "chain": true,
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "skull",
+      "anchor": "🏴‍☠️",
+      "label": "череп",
+      "source": "gen_states",
+      "anim": "sequence",
+      "transition": "glitch_cut",
+      "states": [
+        "clean white pirate skull and crossbones jaw closed icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, centered, pure black background, no text",
+        "keep the EXACT same icon, same position, smooth vector style, no pixels, no blocky edges, only change: drop the jaw wide open"
+      ],
+      "chain": true,
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "hacker",
+      "anchor": "🧑‍💻",
+      "label": "хакер",
+      "source": "gen",
+      "anim": "hacker_rain",
+      "prompt": "minimal monochrome white blocky pixel-art hooded hacker at a laptop icon, glowing, centered, pure black background, no color, no text",
+      "tgs": {
+        "preset": "sequential_glow",
+        "params": {
+          "stagger": 5
+        }
+      }
+    },
+    {
+      "id": "terminal",
+      "anchor": "💻",
+      "label": "терминал",
+      "source": "text_states",
+      "anim": "sequence",
+      "transition": "type",
+      "states": [
+        ">",
+        "> wake",
+        "> wake up",
+        "> wake up\noen",
+        "> wake up\noen_"
+      ],
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "lock",
+      "anchor": "🔒",
+      "label": "безопасность",
+      "source": "gen_states",
+      "anim": "sequence",
+      "transition": "wipe",
+      "states": [
+        "clean white open padlock with the shackle up, unlocked icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, centered, pure black background, no text",
+        "keep the EXACT same icon, same position, smooth vector style, no pixels, no blocky edges, only change: close the shackle down, locked"
+      ],
+      "chain": true,
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "key",
+      "anchor": "🔑",
+      "label": "ключ",
+      "source": "gen",
+      "prompt": "minimal clean white key icon, smooth rounded vector style, bold solid silhouette, no pixels, no blocky edges, no scanlines, centered, pure black background, no text",
+      "anim": "bpm_scale",
+      "rotate_deg": -45,
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "eyes",
+      "anchor": "👁️",
+      "label": "eye of sauron",
+      "source": "gen",
+      "anim": "flicker",
+      "prompt": "Eye of Sauron flaming eye vertical slit pupil ring of fire",
+      "color": "#00DE52",
+      "fit": 0.82,
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "warning",
+      "anchor": "⚠️",
+      "label": "важно",
+      "source": "shape",
+      "shape": "warning",
+      "anim": "warn_bpm",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "thumb",
+      "anchor": "👍",
+      "label": "bender thumbs up",
+      "source": "gen",
+      "prompt": "minimal monochrome white neon terminal icon of a gloved thumbs up hand, cyber hacker style, thick pixel strokes, centered, pure black background, no color, no text",
+      "anim": "bpm_jump",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "soap",
+      "anchor": "🧼",
+      "label": "fight club soap",
+      "color": "#00DE52",
+      "anim": "stretch_pulse",
+      "fit": 0.84,
+      "source": "gen",
+      "prompt": "fight club soap bar with embossed text",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {}
+      }
+    },
+    {
+      "id": "device",
+      "anchor": "📟",
+      "label": "retro phone",
+      "anim": "snap_zoom",
+      "color": "#00DE52",
+      "fit": 0.82,
+      "source": "gen",
+      "prompt": "retro brick phone with antenna",
+      "tgs": {
+        "preset": "sequential_glow",
+        "params": {
+          "stagger": 7
+        }
+      }
+    }
+  ]
+}
