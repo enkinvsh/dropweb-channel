@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, urlparse
 from PIL import Image
 
 from . import build_emoji, svg2base, vectorize
-from . import gen_icon
+from . import gen_icon, gen_prompt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -330,6 +330,18 @@ def make_handler(pack_default, root):
             warn = ("Слишком детально (%d частей) — упрости промт" % groups) if groups > GROUP_CAP else None
             self._send_json({"id": eid, "base": base, "anchor": "", "groups": groups, "warn": warn})
 
+        def _h_prompt(self, body):
+            """Агент-промтер: короткая идея -> грамотный промт (в поле prompt)."""
+            if not os.environ.get("CLIPROXY_KEY"):
+                self._send_json({"error": "no CLIPROXY_KEY"}, 503)
+                return
+            idea = (body.get("idea") or body.get("prompt") or "").strip()
+            if not idea:
+                self._send_json({"error": "пустая идея"}, 400)
+                return
+            text = gen_prompt.rewrite_prompt(idea)
+            self._send_json({"prompt": text, "idea": idea})
+
         def _h_upload(self, body):
             eid = body["id"]
             color = body.get("color")
@@ -504,6 +516,7 @@ def make_handler(pack_default, root):
             path = parsed.path
             routes = {
                 "/api/generate": self._h_generate,
+                "/api/prompt": self._h_prompt,
                 "/api/regenerate": self._h_regenerate,
                 "/api/upload": self._h_upload,
                 "/api/save": self._h_save,
