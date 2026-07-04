@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "name": "dropweb-v2",
+    "default_color": "#00DE52"
+  },
+  "emoji": [
+    {
+      "id": "update",
+      "anchor": "",
+      "source": "gen",
+      "prompt": "update dots",
+      "color": "#00de52",
+      "tgs": {
+        "preset": "sequential",
+        "params": {},
+        "bg": true
+      },
+      "studio": {
+        "kinds": [
+          "el_sequential",
+          "spin"
+        ],
+        "beats": 2,
+        "amp": 2,
+        "ov": 10,
+        "color": "#00de52",
+        "cycle": false,
+        "outline": false,
+        "width": 40,
+        "bg": true,
+        "bgrx": 0.34,
+        "bgfill": "#08090C",
+        "source": "gen"
+      }
+    },
+    {
+      "id": "bender",
+      "anchor": "",
+      "source": "gen",
+      "prompt": "notebook matrix hacker",
+      "color": "#00DE52",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {},
+        "bg": true
+      },
+      "studio": {
+        "kinds": [
+          "heartbeat",
+          "rise"
+        ],
+        "beats": 2,
+        "amp": 22,
+        "ov": 3,
+        "color": "#00DE52",
+        "cycle": false,
+        "outline": false,
+        "width": 14,
+        "bg": true,
+        "bgrx": 0.34
+      }
+    }
+  ]
+}
