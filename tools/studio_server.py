@@ -22,13 +22,32 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 
-import requests
 from PIL import Image
 
 from . import build_emoji, svg2base, vectorize
 from . import gen_icon, gen_prompt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+class BadRequest(Exception):
+    """Ошибка валидации входных данных -> HTTP 400 с сообщением."""
+
+
+def _need_eid(body):
+    """id эмодзи обязателен и не пустой (иначе PIL падает на пустом имени файла)."""
+    eid = (body.get("id") or "").strip()
+    if not eid:
+        raise BadRequest("введи id (slug) — поле пустое")
+    return eid
+
+# --- провайдеры генерации (кураторский список, порядок = приоритет) ---------
+# Nano Banana 2 (gemini image) идёт первым — единственный, что реально живой
+# на прокси через chat/completions. ChatGPT (gpt-image-2) вторым выбором.
+GEN_MODELS = [
+    {"id": "gemini-3.1-flash-image", "label": "Nano Banana 2"},
+    {"id": "gpt-image-2", "label": "ChatGPT"},
+]
 
 # --- flat-icon style steering + complexity guard ---------------------------
 GROUP_CAP = 80
@@ -93,7 +112,7 @@ def _pipeline_from_mask(raw_mask, eid, pack, fit, color):
     masks_dir = os.path.join(ROOT, "build", pack, "masks")
     os.makedirs(masks_dir, exist_ok=True)
     mask_png = os.path.join(masks_dir, "%s.png" % eid)
-    m.save(mask_png)
+    m.save(mask_png, "PNG")  # явный формат: пустой/точечный eid не роняет PIL
     svg = vectorize.make_clean_svg(mask_png, eid, color=color or "#00DE52")
     base = svg2base.svg_to_base(svg)
     groups = _count_groups(base)
@@ -224,23 +243,14 @@ def make_handler(pack_default, root):
             self._send_json({"packs": names, "default": pack_default})
 
         def _api_genconfig(self):
-            """Модели генерации из cliproxyapi: image-модели первыми + дефолт."""
+            """Кураторский список провайдеров генерации: Nano Banana 2 + ChatGPT."""
             key = os.environ.get("CLIPROXY_KEY")
-            out = {"default": gen_icon.MODEL, "base": gen_icon.BASE,
-                   "key": bool(key), "models": []}
-            if key:
-                try:
-                    r = requests.get(
-                        gen_icon.BASE + "/models",
-                        headers={"Authorization": "Bearer " + key}, timeout=6)
-                    r.raise_for_status()
-                    ids = sorted({m.get("id") for m in r.json().get("data", [])
-                                  if m.get("id")})
-                    out["models"] = ([i for i in ids if "image" in i.lower()] +
-                                     [i for i in ids if "image" not in i.lower()])
-                except Exception as e:
-                    out["error"] = str(e)
-            self._send_json(out)
+            self._send_json({
+                "default": GEN_MODELS[0]["id"],
+                "base": gen_icon.BASE,
+                "key": bool(key),
+                "models": GEN_MODELS,
+            })
 
         def do_GET(self):
             parsed = urlparse(self.path)
@@ -275,7 +285,7 @@ def make_handler(pack_default, root):
             if not os.environ.get("CLIPROXY_KEY"):
                 self._send_json({"error": "no CLIPROXY_KEY"}, 503)
                 return
-            eid = body["id"]
+            eid = _need_eid(body)
             prompt = body["prompt"]
             color = body.get("color")
             fit = body.get("fit")
@@ -329,7 +339,7 @@ def make_handler(pack_default, root):
             if not os.environ.get("CLIPROXY_KEY"):
                 self._send_json({"error": "no CLIPROXY_KEY"}, 503)
                 return
-            eid = body["id"]
+            eid = _need_eid(body)
             prompt = body["prompt"]
             color = body.get("color")
             fit = body.get("fit")
@@ -368,7 +378,7 @@ def make_handler(pack_default, root):
             self._send_json({"prompt": text, "idea": idea})
 
         def _h_upload(self, body):
-            eid = body["id"]
+            eid = _need_eid(body)
             color = body.get("color")
             fit = body.get("fit")
             png_bytes = base64.b64decode(body["png_b64"])
@@ -384,7 +394,7 @@ def make_handler(pack_default, root):
 
         def _h_refit(self, body):
             """Переподгонка масштаба (fit) из сохранённой маски — без генерации."""
-            eid = body["id"]
+            eid = _need_eid(body)
             fit = body.get("fit")
             color = body.get("color")
             pack = body.get("pack", pack_default)
@@ -593,8 +603,12 @@ def make_handler(pack_default, root):
                 return
             try:
                 handler(body)
+            except BadRequest as e:
+                self._send_json({"error": str(e)}, 400)
             except KeyError as e:
                 self._send_json({"error": "missing field %s" % e}, 400)
+            except gen_icon.UpstreamError as e:
+                self._send_json({"error": str(e)}, 502)
             except Exception as e:
                 traceback.print_exc()
                 self._send_json({"error": str(e)}, 500)

@@ -12,5 +12,6 @@ fi
 : "${CLIPROXY_KEY:=$(grep -oE 'sk-[a-f0-9]{32,}' "$HOME/.cli-proxy-api/cliproxyapi.conf.staged" 2>/dev/null | head -1 || true)}"
 export CLIPROXY_KEY
 ( sleep 1.6; command -v open >/dev/null && open "http://localhost:$PORT" >/dev/null 2>&1 || true ) &
-echo "dropweb studio -> http://localhost:$PORT  (ключ генерации: ${CLIPROXY_KEY:+есть}${CLIPROXY_KEY:-НЕТ — будет только upload/тюнинг})"
+if [ -n "${CLIPROXY_KEY:-}" ]; then KEYSTATE="есть"; else KEYSTATE="НЕТ — будет только upload/тюнинг"; fi
+echo "dropweb studio -> http://localhost:$PORT  (ключ генерации: $KEYSTATE)"
 exec .venv/bin/python3 -m tools.studio_server --port "$PORT"

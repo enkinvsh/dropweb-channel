@@ -18,7 +18,7 @@ import sys
 import requests
 
 BASE = os.environ.get("CLIPROXY_BASE", "http://localhost:8317/v1")
-TEXT_MODEL = os.environ.get("DW_TEXT_MODEL", "gpt-5.5")
+TEXT_MODEL = os.environ.get("DW_TEXT_MODEL", "gemini-2.5-flash")
 
 SYSTEM = (
     "You are a prompt engineer for a neon sticker studio. The user gives a short idea "
@@ -59,7 +59,15 @@ def rewrite_prompt(idea, model=None, timeout=45):
         },
         timeout=timeout,
     )
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        emsg = ""
+        try:
+            emsg = (resp.json().get("error") or {}).get("message") or ""
+        except Exception:
+            emsg = (resp.text or "")[:200]
+        raise RuntimeError("cliproxyapi %s: %s (модель %s — попробуй другую через "
+                           "DW_TEXT_MODEL)" % (resp.status_code, emsg or "ошибка",
+                                               model or TEXT_MODEL))
     text = (resp.json()["choices"][0]["message"]["content"] or "").strip()
     text = text.strip().strip('"').strip("'").strip()
     return " ".join(text.split())
