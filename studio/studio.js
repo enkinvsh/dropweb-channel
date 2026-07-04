@@ -1,15 +1,16 @@
 // ===== dropweb emoji studio v4 — категории + крутые + draw-on =====
 const CATS={
  "Пульс/масштаб":["beat","throb","breathe","heartbeat","pulse","zoom","pop","elastic","neon"],
- "Трансформ":["squash","stretchV","stretchH","jelly","rubber","flip","cardflip","cardflipV","spin3d","tumble"],
- "Вращение":["spin","popspin","tick","swing","ring","wobble"],
- "Движение":["bounce","hop","drop","rise","vibrate","shake"],
- "Поэлементно":["el_stagger","el_sequential","el_type","el_pulse","el_lead","el_assemble","el_segment","el_orbit"],
- "FX":["drawon","twinkle","blink","flicker","glitch"],
+ "Трансформ":["squash","stretchV","stretchH","jelly","rubber","magnet"],
+ "3D":["flip","cardflip","cardflipV","spin3d","tumble","coin3d","cube3d","door3d","gyro3d","orbit3d"],
+ "Вращение":["spin","popspin","tick","swing","pendulum","ring","wobble"],
+ "Движение":["bounce","hop","drop","rise","vibrate","shake","launch","warp"],
+ "Поэлементно":["el_stagger","el_sequential","el_type","el_pulse","el_lead","el_assemble","el_segment","el_orbit","el_wave","el_domino","el_explode","el_swirl"],
+ "FX":["drawon","twinkle","blink","flicker","glitch","blackhole","quake"],
  "—":["none"]
 };
 const KINDS=Object.values(CATS).flat();
-const BEATS_DEFAULT={spin:2,popspin:2,blink:2,swing:2,spin3d:2,flip:2,cardflip:2,cardflipV:2,tick:2,drop:2,rise:2,pop:2,glitch:2,tumble:2,drawon:2,elastic:1};
+const BEATS_DEFAULT={spin:2,popspin:2,blink:2,swing:2,spin3d:2,flip:2,cardflip:2,cardflipV:2,tick:2,drop:2,rise:2,pop:2,glitch:2,tumble:2,drawon:2,elastic:1,coin3d:2,cube3d:2,door3d:2,gyro3d:2,orbit3d:2,pendulum:2,launch:2,warp:2,blackhole:2,quake:2,magnet:2,el_wave:2,el_domino:2,el_explode:2,el_swirl:2};
 const EZ={o:{x:[0.25],y:[0]},i:{x:[0.4],y:[1]}}, ES={o:{x:[0.33],y:[0]},i:{x:[0.67],y:[1]}}, EI={o:{x:[0.6],y:[0]},i:{x:[0.9],y:[1]}};
 const EOV={o:{x:[0.2],y:[0]},i:{x:[0.3],y:[1.7]}}; // overshoot (supernormal y)
 function kf(t,v,e){v=Array.isArray(v)?v:[v];return {t:Math.round(t),s:v,o:(e||ES).o,i:(e||ES).i};}
@@ -17,11 +18,12 @@ function kfh(t,v){v=Array.isArray(v)?v:[v];return {t:Math.round(t),s:v,h:1};}
 function A(a){return {a:1,k:a};} function K(v){return {a:0,k:v};}
 
 function buildProps(kind,B,amp,ov){
-  const a=amp,u=ov; let s=K([100,100,100]),r=K(0),o=K(100),p=K([256,256,0]);
+  const a=amp,u=ov; let s=K([100,100,100]),r=K(0),o=K(100),p=K([256,256,0]),an=null,sk=null,sa=null;
   const SC=q=>A(q.map(([f,v,e])=>kf(f*B,[v,v,100],e)));
   const XY=q=>A(q.map(([f,x,y,e])=>kf(f*B,[x,y,100],e)));
   const RO=q=>A(q.map(([f,v,e])=>kf(f*B,[v],e)));
   const PO=q=>A(q.map(([f,y,e])=>kf(f*B,[256,Math.max(96,Math.min(416,y)),0],e)));
+  const SMP=(fn,n)=>{n=n||25;return A(Array.from({length:n},(_,i)=>kf(i/(n-1)*B,fn(i/(n-1)))));};
   switch(kind){
    case"beat": s=SC([[0,100,EZ],[0.17,100+a,EZ],[0.4,100-u*0.4,ES],[0.66,100+u*0.1,ES],[1,100]]);break;
    case"throb": s=SC([[0,100,ES],[0.5,100+a*0.6,ES],[1,100]]);break;
@@ -58,8 +60,21 @@ function buildProps(kind,B,amp,ov){
    case"blink": s=XY([[0,100,100,ES],[0.78,100,100,ES],[0.86,100,8,EZ],[0.94,100,100,EZ],[1,100,100]]);break;
    case"flicker": s=SC([[0,100,ES],[0.2,100+a,ES],[0.38,100-a*0.5,ES],[0.55,100+a*1.1,ES],[0.72,100-a*0.2,ES],[1,100]]);break;
    case"glitch": p=A([kfh(0,[256,256,0]),kfh(0.12*B,[256+a*0.5,256-a*0.2,0]),kfh(0.2*B,[256-a*0.4,256,0]),kfh(0.28*B,[256,256,0]),kfh(0.6*B,[256,256,0]),kfh(0.66*B,[256-a*0.5,256+a*0.2,0]),kfh(0.72*B,[256,256,0]),kf(B,[256,256,0])]);s=A([kfh(0,[100,100,100]),kfh(0.12*B,[100+a*0.4,100-a*0.3,100]),kfh(0.2*B,[100,100,100]),kfh(0.66*B,[100-a*0.3,100+a*0.3,100]),kfh(0.72*B,[100,100,100]),kf(B,[100,100,100])]);break;
+   // --- 3D (перспектива через per-axis scale, skew и пивоты) ---
+   case"coin3d": s=XY([[0,100,100,ES],[0.25,8,100+u*0.4,ES],[0.5,-100,100,ES],[0.75,8,100+u*0.4,ES],[1,100,100]]);r=RO([[0,0,ES],[0.5,a*0.2,ES],[1,0]]);break;
+   case"cube3d": p=A([kf(0,[256,256,0],EI),kfh(0.42*B,[256+a*2,256,0]),kf(0.5*B,[256-a*2,256,0],ES),kf(B,[256,256,0])]);s=A([kf(0,[100,100,100],EI),kfh(0.42*B,[6,90,100]),kf(0.5*B,[6,90,100],ES),kf(B,[100,100,100])]);break;
+   case"door3d": an=K([100,256,0]);p=K([100,256,0]);s=A([kf(0,[100,100,100],EZ),kf(0.35*B,[12,100,100],ES),kf(0.6*B,[12,100,100],EI),kf(0.8*B,[100+u*0.5,100,100],EZ),kf(0.9*B,[100-u*0.2,100,100],ES),kf(B,[100,100,100])]);sk=A([kf(0,[0],EZ),kf(0.35*B,[-a*0.25],ES),kf(0.6*B,[-a*0.25],EI),kf(0.85*B,[a*0.08],EZ),kf(B,[0])]);sa=K(0);break;
+   case"gyro3d": sk=K(a*0.3);sa=A([kf(0,[0],ES),kf(0.5*B,[180],ES),kf(B,[360])]);s=SC([[0,100,ES],[0.5,100+u*0.15,ES],[1,100]]);break;
+   case"orbit3d": {const R=a*1.6;p=SMP(t=>{const q=2*Math.PI*t;return [256+R*Math.sin(q),256+R*0.25*Math.cos(q),0];});s=SMP(t=>{const v=100+a*0.45*Math.cos(2*Math.PI*t);return [v,v,100];});o=SMP(t=>[100-Math.min(38,a*0.5)*(1-Math.cos(2*Math.PI*t))/2]);break;}
+   // --- Сюжетные ---
+   case"pendulum": an=K([256,90,0]);p=K([256,90,0]);r=RO([[0,0,ES],[0.25,a*0.8,ES],[0.5,0,ES],[0.75,-a*0.8,ES],[1,0]]);break;
+   case"launch": p=A([kf(0,[256,256,0],EZ),kf(0.12*B,[256,270,0],EZ),kfh(0.32*B,[256,-330,0]),kf(0.5*B,[256,840,0],EZ),kf(0.68*B,[256,242,0],EZ),kf(0.8*B,[256,262,0],ES),kf(B,[256,256,0])]);s=A([kf(0,[100,100,100],EZ),kf(0.12*B,[114,86,100],EZ),kfh(0.32*B,[68,145,100]),kf(0.5*B,[68,145,100],EZ),kf(0.68*B,[112,88,100],EZ),kf(0.82*B,[94,108,100],ES),kf(B,[100,100,100])]);break;
+   case"magnet": p=A([kf(0,[256,256,0],ES),kf(0.32*B,[256-a*2.2,256,0],EZ),kf(0.44*B,[256-a*2.4,256,0],EI),kf(0.54*B,[256+a*0.7,256,0],EZ),kf(0.64*B,[256-a*0.3,256,0],ES),kf(0.74*B,[256+a*0.12,256,0],ES),kf(B,[256,256,0])]);r=RO([[0,0,ES],[0.36,-a*0.25,EZ],[0.52,a*0.1,EZ],[0.66,-a*0.05,ES],[1,0]]);s=XY([[0,100,100,ES],[0.44,92,106,EZ],[0.54,112,90,EZ],[0.66,96,103,ES],[1,100,100]]);break;
+   case"warp": p=A([kf(0,[256,256,0],EZ),kf(0.1*B,[238,256,0],EZ),kfh(0.3*B,[900,256,0]),kf(0.42*B,[-390,256,0],EZ),kf(0.62*B,[274,256,0],EZ),kf(0.76*B,[250,256,0],ES),kf(B,[256,256,0])]);s=A([kf(0,[100,100,100],EZ),kf(0.1*B,[95,103,100],EZ),kfh(0.3*B,[280,24,100]),kf(0.42*B,[280,24,100],EZ),kf(0.62*B,[118,90,100],EZ),kf(0.78*B,[95,104,100],ES),kf(B,[100,100,100])]);o=A([kf(0,[100]),kf(0.2*B,[100],EI),kfh(0.3*B,[0]),kf(0.4*B,[0],EZ),kf(0.5*B,[100],EZ),kf(B,[100])]);break;
+   case"blackhole": r=A([kf(0,[0],EI),kfh(0.42*B,[480]),kf(0.55*B,[480],EZ),kf(0.8*B,[695],EZ),kf(B,[720])]);s=A([kf(0,[100,100,100],EI),kfh(0.42*B,[4,4,100]),kf(0.55*B,[4,4,100],EZ),kf(0.72*B,[100+u*0.8,100+u*0.8,100],EZ),kf(0.86*B,[100-u*0.3,100-u*0.3,100],ES),kf(B,[100,100,100])]);o=A([kf(0,[100]),kf(0.32*B,[100],EI),kfh(0.42*B,[0]),kf(0.5*B,[0],EZ),kf(0.6*B,[100],EZ),kf(B,[100])]);break;
+   case"quake": {const J=[[0.05,1,-0.55],[0.11,-0.85,0.5],[0.17,0.7,0.32],[0.23,-0.55,-0.42],[0.3,0.42,0.28],[0.37,-0.28,-0.18],[0.45,0.16,0.1],[0.54,-0.07,0.04]];p=A([kf(0,[256,256,0])].concat(J.map(j=>kfh(j[0]*B,[256+a*j[1],256+a*j[2],0]))).concat([kf(0.64*B,[256,256,0],ES),kf(B,[256,256,0])]));r=A([kf(0,[0])].concat(J.map((j,i)=>kfh(j[0]*B,[(i%2?-1:1)*a*0.14*(1-j[0]*1.3)]))).concat([kf(0.64*B,[0],ES),kf(B,[0])]));s=A([kf(0,[100,100,100],EZ),kf(0.05*B,[100+u*0.7,100+u*0.7,100],EZ),kf(0.2*B,[100,100,100],ES),kf(B,[100,100,100])]);break;}
   }
-  return {s,r,o,p};
+  return {s,r,o,p,a:an,sk,sa};
 }
 
 function hexRGB(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255];}
@@ -74,7 +89,7 @@ function drawOn(shapes,N,col,outline){const EE={i:{x:[0.6],y:[1]},o:{x:[0.4],y:[
 function elementGroups(layers){const out=[];function walk(items){(items||[]).forEach(x=>{if(!x||x.ty!=="gr"||!x.it)return;const hasPath=x.it.some(y=>y&&y.ty==="sh");if(hasPath)out.push(x);else walk(x.it);});}(layers||[]).forEach(L=>walk(L.shapes));return out;}
 function elementBBox(g){let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;function walk(items){(items||[]).forEach(x=>{if(!x)return;if(x.ty==="sh"&&x.ks&&x.ks.k&&Array.isArray(x.ks.k.v)){x.ks.k.v.forEach(p=>{if(!Array.isArray(p))return;minx=Math.min(minx,p[0]);miny=Math.min(miny,p[1]);maxx=Math.max(maxx,p[0]);maxy=Math.max(maxy,p[1]);});}else if(x.ty==="gr"&&x.it)walk(x.it);});}walk(g.it);if(!isFinite(minx))return null;return {cx:(minx+maxx)/2,cy:(miny+maxy)/2,w:Math.max(1,maxx-minx),h:Math.max(1,maxy-miny)};}
 function elementTr(g){let tr=g.it&&g.it.find(x=>x.ty==="tr");if(!tr){tr={ty:"tr",a:K([0,0]),p:K([0,0]),s:K([100,100]),r:K(0),o:K(100)};g.it.push(tr);}return tr;}
-function applyElementAnim(base,kind,N,amp,ov){const layers=Array.isArray(base)?base:(base&&base.layers)||[];const groups=elementGroups(layers).map(g=>({g,b:elementBBox(g)})).filter(x=>x.b).sort((a,b)=>a.b.cx-b.b.cx);const count=groups.length;if(!count)return base;const step=Math.max(1,Math.round(N*0.12)),dur=Math.max(1,Math.round(N*0.22));const env=t=>0.5*(1-Math.cos(2*Math.PI*t));const wavePeak=t=>0.5*(1+Math.cos(2*Math.PI*t));const q=t=>Math.max(0,Math.min(N,Math.round(t)));const clean=pts=>{const out=[];pts.forEach(p=>{const kk=(p[3]?kfh:kf)(q(p[0]),p[1],p[2]);if(out.length&&out[out.length-1].t===kk.t&&JSON.stringify(out[out.length-1].s)===JSON.stringify(kk.s))return;out.push(kk);});return A(out);};const samples=fn=>A(Array.from({length:13},(_,i)=>{const t=i/12*N;return kf(t,fn(i/12));}));groups.forEach(({g,b},index)=>{const tr=elementTr(g),cx=b.cx,cy=b.cy,w=b.w,h=b.h,m=Math.max(w,h),d=Math.min(N-1,Math.round((index/count)*Math.max(1,N-dur))),tin=Math.min(N,d+dur),tout=Math.max(tin,N-dur);if(["el_pulse","el_lead","el_segment"].includes(kind)){tr.a=K([cx,cy]);tr.p=K([cx,cy]);}switch(kind){case"el_sequential":tr.o=clean([[0,[25]],[d,[25]],[tin,[100],EZ],[tout,[100]],[N,[25]]]);break;case"el_type":tr.o=clean([[0,[25],null,true],[d,[25],null,true],[Math.min(N,d+1),[100],null,true],[N-1,[100],null,true],[N,[25]]]);break;case"el_pulse":{const phase=index/count;tr.s=samples(t=>{const v=100+amp*0.6*wavePeak(t-phase);return [v,v];});break;}case"el_stagger":tr.a=K([cx,cy]);tr.p=clean([[0,[cx,cy+0.8*h]],[d,[cx,cy+0.8*h]],[tin,[cx,cy],EZ],[tout,[cx,cy]],[N,[cx,cy+0.8*h]]]);tr.o=clean([[0,[15]],[d,[15]],[tin,[100],EZ],[tout,[100]],[N,[15]]]);break;case"el_lead":tr.r=samples(t=>[amp*0.5*env((t-(d/N)+1)%1)]);break;case"el_assemble":{const ang=2*Math.PI*index/count,dx=Math.cos(ang)*0.6*m,dy=Math.sin(ang)*0.6*m;tr.a=K([cx,cy]);tr.p=clean([[0,[cx+dx,cy+dy]],[d,[cx+dx,cy+dy]],[tin,[cx,cy],EZ],[tout,[cx,cy]],[N,[cx+dx,cy+dy]]]);tr.o=clean([[0,[10]],[d,[10]],[tin,[100],EZ],[tout,[100]],[N,[10]]]);break;}case"el_segment":tr.r=clean([[0,[amp*0.6]],[d,[amp*0.6]],[tin,[0],EZ],[tout,[0]],[N,[amp*0.6]]]);tr.o=clean([[0,[20]],[d,[20]],[tin,[100],EZ],[tout,[100]],[N,[20]]]);break;case"el_orbit":{const rad=0.22*m,phase=index/count;tr.a=K([cx,cy]);tr.p=samples(t=>[cx+Math.cos(2*Math.PI*(t+phase))*rad,cy+Math.sin(2*Math.PI*(t+phase))*rad]);break;}}});return base;}
+function applyElementAnim(base,kind,N,amp,ov){const layers=Array.isArray(base)?base:(base&&base.layers)||[];const groups=elementGroups(layers).map(g=>({g,b:elementBBox(g)})).filter(x=>x.b).sort((a,b)=>a.b.cx-b.b.cx);const count=groups.length;if(!count)return base;const step=Math.max(1,Math.round(N*0.12)),dur=Math.max(1,Math.round(N*0.22));const env=t=>0.5*(1-Math.cos(2*Math.PI*t));const wavePeak=t=>0.5*(1+Math.cos(2*Math.PI*t));const q=t=>Math.max(0,Math.min(N,Math.round(t)));const clean=pts=>{const out=[];pts.forEach(p=>{const kk=(p[3]?kfh:kf)(q(p[0]),p[1],p[2]);if(out.length&&out[out.length-1].t===kk.t&&JSON.stringify(out[out.length-1].s)===JSON.stringify(kk.s))return;out.push(kk);});return A(out);};const samples=fn=>A(Array.from({length:13},(_,i)=>{const t=i/12*N;return kf(t,fn(i/12));}));groups.forEach(({g,b},index)=>{const tr=elementTr(g),cx=b.cx,cy=b.cy,w=b.w,h=b.h,m=Math.max(w,h),d=Math.min(N-1,Math.round((index/count)*Math.max(1,N-dur))),tin=Math.min(N,d+dur),tout=Math.max(tin,N-dur);if(["el_pulse","el_lead","el_segment"].includes(kind)){tr.a=K([cx,cy]);tr.p=K([cx,cy]);}switch(kind){case"el_sequential":tr.o=clean([[0,[25]],[d,[25]],[tin,[100],EZ],[tout,[100]],[N,[25]]]);break;case"el_type":tr.o=clean([[0,[25],null,true],[d,[25],null,true],[Math.min(N,d+1),[100],null,true],[N-1,[100],null,true],[N,[25]]]);break;case"el_pulse":{const phase=index/count;tr.s=samples(t=>{const v=100+amp*0.6*wavePeak(t-phase);return [v,v];});break;}case"el_stagger":tr.a=K([cx,cy]);tr.p=clean([[0,[cx,cy+0.8*h]],[d,[cx,cy+0.8*h]],[tin,[cx,cy],EZ],[tout,[cx,cy]],[N,[cx,cy+0.8*h]]]);tr.o=clean([[0,[15]],[d,[15]],[tin,[100],EZ],[tout,[100]],[N,[15]]]);break;case"el_lead":tr.r=samples(t=>[amp*0.5*env((t-(d/N)+1)%1)]);break;case"el_assemble":{const ang=2*Math.PI*index/count,dx=Math.cos(ang)*0.6*m,dy=Math.sin(ang)*0.6*m;tr.a=K([cx,cy]);tr.p=clean([[0,[cx+dx,cy+dy]],[d,[cx+dx,cy+dy]],[tin,[cx,cy],EZ],[tout,[cx,cy]],[N,[cx+dx,cy+dy]]]);tr.o=clean([[0,[10]],[d,[10]],[tin,[100],EZ],[tout,[100]],[N,[10]]]);break;}case"el_segment":tr.r=clean([[0,[amp*0.6]],[d,[amp*0.6]],[tin,[0],EZ],[tout,[0]],[N,[amp*0.6]]]);tr.o=clean([[0,[20]],[d,[20]],[tin,[100],EZ],[tout,[100]],[N,[20]]]);break;case"el_orbit":{const rad=0.22*m,phase=index/count;tr.a=K([cx,cy]);tr.p=samples(t=>[cx+Math.cos(2*Math.PI*(t+phase))*rad,cy+Math.sin(2*Math.PI*(t+phase))*rad]);break;}case"el_wave":{tr.a=K([cx,cy]);tr.p=samples(t=>[cx,cy+amp*0.7*Math.sin(2*Math.PI*(t-index/Math.max(1,count)))]);break;}case"el_domino":{const fdur=Math.max(2,Math.round(N*0.16));const ds=Math.round((index/Math.max(1,count))*Math.max(1,N-2*fdur-2));tr.a=K([cx,cy]);tr.p=K([cx,cy]);tr.s=clean([[0,[100,100]],[ds,[100,100],EZ],[ds+fdur,[-100,100],EZ],[Math.min(N-1,ds+2*fdur),[100,100],ES],[N,[100,100]]]);break;}case"el_explode":{const ex=cx-256,ey=cy-256,el=Math.max(30,Math.hypot(ex,ey));const fd=Math.min(m,180)*0.6+amp*2.5;const fx=cx+ex/el*fd,fy=cy+ey/el*fd;const dd=Math.round(index/Math.max(1,count)*N*0.08);const rr=(index%2?1:-1)*(50+amp*1.5);tr.a=K([cx,cy]);tr.p=clean([[0,[cx,cy]],[dd,[cx,cy],EZ],[N*0.26+dd,[fx,fy],ES],[N*0.5+dd,[fx,fy],EZ],[N*0.8,[cx,cy],EOV],[N,[cx,cy]]]);tr.r=clean([[0,[0]],[dd,[0],EZ],[N*0.26+dd,[rr],ES],[N*0.5+dd,[rr],EZ],[N*0.8,[0],EOV],[N,[0]]]);tr.o=clean([[0,[100]],[dd,[100],EZ],[N*0.26+dd,[30],ES],[N*0.5+dd,[30],EZ],[N*0.74,[100],ES],[N,[100]]]);break;}case"el_swirl":{const ph=index/Math.max(1,count);tr.a=K([cx,cy]);tr.p=samples(t=>{const q2=2*Math.PI*(t-ph);return [cx+amp*0.6*Math.sin(q2),cy+amp*0.35*Math.cos(q2)];});tr.s=samples(t=>{const v=100+amp*0.3*Math.cos(2*Math.PI*(t-ph));return [v,v];});break;}}});return base;}
 function bgLayer(w,h,N,rxFrac,fillHex){
   const rx=Math.round(Math.min(w,h)*(rxFrac!=null?rxFrac:0.16));   // ~16% smooth bento radius (default)
   const fill=hexRGB(fillHex||'#08090C');            // default #08090C
@@ -99,8 +114,11 @@ function cfgLayers(opt){
 // dir (-1): разворот вращения (r→-r) и вертикали движения (y→512-y), generic пост-обработка.
 function applyDir(ks,dir){
   if(dir!==-1)return;
-  if(ks.r){if(ks.r.a===1)ks.r.k.forEach(f=>{if(Array.isArray(f.s))f.s=f.s.map(v=>typeof v==='number'?-v:v);});else if(typeof ks.r.k==='number')ks.r.k=-ks.r.k;else if(Array.isArray(ks.r.k))ks.r.k=ks.r.k.map(v=>typeof v==='number'?-v:v);}
-  if(ks.p){const ref=p=>(Array.isArray(p)?[p[0],512-p[1],p[2]!=null?p[2]:0]:p);if(ks.p.a===1)ks.p.k.forEach(f=>{if(Array.isArray(f.s))f.s=ref(f.s);});else if(Array.isArray(ks.p.k))ks.p.k=ref(ks.p.k);}
+  const neg=pr=>{if(!pr)return;if(pr.a===1)pr.k.forEach(f=>{if(Array.isArray(f.s))f.s=f.s.map(v=>typeof v==='number'?-v:v);});else if(typeof pr.k==='number')pr.k=-pr.k;else if(Array.isArray(pr.k))pr.k=pr.k.map(v=>typeof v==='number'?-v:v);};
+  neg(ks.r);neg(ks.sk);
+  const ref=p=>(Array.isArray(p)?[p[0],512-p[1],p[2]!=null?p[2]:0]:p);
+  const refProp=pr=>{if(!pr)return;if(pr.a===1)pr.k.forEach(f=>{if(Array.isArray(f.s))f.s=ref(f.s);});else if(Array.isArray(pr.k))pr.k=ref(pr.k);};
+  refProp(ks.p);refProp(ks.a); // анкер отражаем вместе с позицией: пивот-анимации (pendulum/door3d) при dir=-1 корректно переворачиваются
 }
 // phase (0..1): циклический сдвиг времени keyframes слоя для разнообразия в миксе.
 // Сохраняет бесшовный луп: сдвигает t→(t+phase*N)%N, пересортировывает, дублирует крайние кадры на 0 и N.
@@ -118,7 +136,7 @@ function shiftProp(prop,phase,N){
   const dedup=[];out.forEach(f=>{if(dedup.length&&dedup[dedup.length-1].t===f.t)dedup[dedup.length-1]=f;else dedup.push(f);});
   return {a:1,k:dedup};
 }
-function applyPhase(ks,phase,N){if(!phase)return;["p","s","r","o"].forEach(key=>{if(ks[key])ks[key]=shiftProp(ks[key],phase,N);});}
+function applyPhase(ks,phase,N){if(!phase)return;["p","s","r","o","sk","sa"].forEach(key=>{if(ks[key])ks[key]=shiftProp(ks[key],phase,N);});}
 
 function makeAnimX(base,opt){
   let layers=cfgLayers(opt).filter(L=>L.kind&&L.kind!=="none");
@@ -132,7 +150,8 @@ function makeAnimX(base,opt){
   let prev=null;
   wholeLayers.forEach((L,i)=>{
     const ind=9000+i;const pr=buildProps(L.kind,N,L.amp,L.ov);
-    const ks={a:K([256,256,0]),p:pr.p,s:pr.s,r:pr.r,o:pr.o};
+    const ks={a:pr.a||K([256,256,0]),p:pr.p,s:pr.s,r:pr.r,o:pr.o};
+    if(pr.sk){ks.sk=pr.sk;ks.sa=pr.sa||K(0);}
     applyDir(ks,L.dir);applyPhase(ks,L.phase,N);
     const rig={ddd:0,ind,ty:3,nm:"rig"+i,sr:1,ip:0,op:N,st:0,bm:0,ks};
     if(prev!==null)rig.parent=prev;a.layers.push(rig);prev=ind;

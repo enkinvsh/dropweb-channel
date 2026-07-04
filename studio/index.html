@@ -175,6 +175,8 @@ input[type=range]:focus-visible{outline:2px solid var(--accent-bright);outline-o
       <div class="control-grid">
         <div class="field"><label class="field-label" for="genid"><span>id</span></label><input type="text" id="genid" placeholder="slug"></div>
         <div class="field"><label class="field-label" for="gencolor"><span>Цвет</span></label><input class="color-input" type="color" id="gencolor" value="#00DE52" aria-label="Цвет генерации"></div>
+        <div class="field span-2"><label class="field-label" for="genmodel"><span>Модель генерации</span></label><select id="genmodel" aria-label="Модель генерации изображений"></select></div>
+        <div class="field span-2"><label class="field-label" for="genfit"><span>Масштаб иконки</span><span class="val" id="vgenfit">80%</span></label><input class="slider" type="range" id="genfit" min="50" max="95" step="1" value="80" aria-label="Масштаб иконки в кадре"><div class="field-hint">Насколько иконка заполняет кадр. Действует при генерации/загрузке; «⤢ Масштаб» пересчитывает текущую без генерации.</div></div>
         <div class="field span-2"><div class="field-label"><label for="prompt">prompt</label><button id="autoprompt" class="mini" type="button" title="Сгенерировать промт из идеи">✨ Авто-промт</button></div><textarea id="prompt" placeholder="неоновый стикер dropweb..."></textarea></div>
       </div>
       <div class="btn-row"><button class="btn" id="generate">✨ Генерировать</button><button id="refBtn" class="btn sec" type="button">📎 Референс</button></div>
@@ -184,7 +186,7 @@ input[type=range]:focus-visible{outline:2px solid var(--accent-bright);outline-o
       </div>
       <div class="btn-row"><button class="btn sec" id="uploadBtn">⬆ Загрузить PNG</button><button class="btn sec" id="regen">♻ Перегенерить</button></div>
       <input type="file" id="pngfile" accept="image/png" aria-label="Загрузить PNG" hidden>
-      <button class="btn sec" id="save">💾 Сохранить</button>
+      <div class="btn-row"><button class="btn sec" id="refitBtn" title="Пересчитать масштаб текущей иконки из сохранённой маски — без генерации">⤢ Масштаб</button><button class="btn sec" id="save">💾 Сохранить</button></div>
       <div class="hint">Генерация ~1–3 мин. Стиль авто-выправляется под плоскую неон-иконку.</div><div class="status" id="genstatus"></div>
     </section>
     <section class="export-card card" aria-labelledby="exportTitle">
@@ -207,7 +209,7 @@ const PRESETS=["#00DE52","#38BDF8","#A78BFA","#EF4444","#F59E0B","#F5A3C7","#FFF
 let state={}; function defaultCfg(id){const k=(id&&DEFMAP[id])||"beat";return {layers:[{kind:k,amp:14,ov:10,dir:1,phase:0}],beats:(BEATS_DEFAULT[k]||1),color:"#00DE52",cycle:false,outline:false,width:14,bg:false,bgrx:0.16,bgfill:'#08090C'};}
 function getLayers(s){if(Array.isArray(s.layers)&&s.layers.length)return s.layers.map(L=>({kind:(L&&L.kind)||"none",amp:(L&&L.amp!=null)?L.amp:14,ov:(L&&L.ov!=null)?L.ov:10,dir:(L&&L.dir===-1)?-1:1,phase:(L&&L.phase)?L.phase:0}));const kinds=(s.kinds&&s.kinds.length)?s.kinds:["beat"];const amp=s.amp!=null?s.amp:14,ov=s.ov!=null?s.ov:10;return kinds.map(k=>({kind:k,amp,ov,dir:1,phase:0}));}
 function ensureLayers(s){if(!Array.isArray(s.layers)||!s.layers.length){s.layers=getLayers(s);delete s.kinds;delete s.amp;delete s.ov;}return s.layers;}
-let cur='',players={},big=null,paused=false;
+let cur='',players={},big=null,paused=false,idlePaused=false,idleT=null;
 function cfg(id){return state[id];}
 function setBg(c){var v=(c==='checker')?'var(--checker)':c;document.getElementById('big').style.background=v;document.querySelectorAll('.lp').forEach(e=>e.style.background=v);}
 function fillSel(sel){for(const cat in CATS){if(cat==='—')continue;const og=document.createElement('optgroup');og.label=cat;CATS[cat].forEach(k=>og.appendChild(new Option(k,k)));sel.appendChild(og);}sel.appendChild(new Option('none','none'));}
@@ -233,10 +235,16 @@ const swDiv=document.getElementById('sw'); PRESETS.forEach(c=>{const s=document.
 const grid=document.getElementById('grid');
 function addCell(id){const c=document.createElement('div');c.className='cell';c.id='c_'+id;c.innerHTML=`<div class="lp" id="lp_${id}"></div><div class="nm">${ANCHORS[id]||''} ${id}</div>`;c.onclick=()=>select(id);c.addEventListener('mouseenter',()=>{const p=players[id];if(p)p.play();});c.addEventListener('mouseleave',()=>restCell(players[id]));grid.appendChild(c);renderCell(id);}
 function restCell(p){if(!p)return;try{const tf=p.totalFrames||1;p.goToAndStop(Math.max(0,Math.floor(tf*0.4)),true);}catch(e){try{p.goToAndStop(0,true);}catch(_){}}}
-function renderCell(id){if(players[id])players[id].destroy();const an=lottie.loadAnimation({container:document.getElementById('lp_'+id),renderer:'svg',loop:true,autoplay:false,animationData:makeAnimX(BASES[id],cfg(id))});an.addEventListener('DOMLoaded',()=>restCell(an));players[id]=an;}
-function renderBig(){if(big)big.destroy();big=lottie.loadAnimation({container:document.getElementById('big'),renderer:'svg',loop:true,autoplay:true,animationData:makeAnimX(BASES[cur],cfg(cur))});if(paused){try{big.pause();}catch(e){}}}
+function renderCell(id){if(players[id])players[id].destroy();const an=lottie.loadAnimation({container:document.getElementById('lp_'+id),renderer:'svg',loop:true,autoplay:false,animationData:makeAnimX(BASES[id],cfg(id))});an.setSubframe(false);an.addEventListener('DOMLoaded',()=>restCell(an));players[id]=an;}
+// Превью играет только когда: не на ручной паузе, был ввод <10с назад, вкладка видима и окно в фокусе.
+function bigShouldPlay(){return !!big&&!paused&&!idlePaused&&!document.hidden&&document.hasFocus();}
+function syncBig(){if(!big)return;try{bigShouldPlay()?big.play():big.pause();}catch(e){}}
+function renderBig(){if(big)big.destroy();big=lottie.loadAnimation({container:document.getElementById('big'),renderer:'svg',loop:true,autoplay:false,animationData:makeAnimX(BASES[cur],cfg(cur))});big.setSubframe(false);syncBig();}
 function syncPanel(){const s=cfg(cur);if(!s)return;const layers=getLayers(s);renderLayers();beats.value=s.beats;vbeats.textContent=s.beats;document.getElementById('custom').value=s.color;document.getElementById('width').value=s.width||14;document.getElementById('vwidth').textContent=(s.width||14);document.getElementById('rainbow').classList.toggle('on',!!s.cycle);document.getElementById('outline').classList.toggle('on',!!s.outline);document.getElementById('curname').textContent=(ANCHORS[cur]||'')+' '+cur;document.getElementById('cur').textContent=cur+' · '+layers.map(L=>L.kind).join('+')+(s.cycle?' · 🌈':'');document.querySelectorAll('.sw').forEach((e,i)=>e.classList.toggle('on',!s.cycle&&PRESETS[i]===s.color));const bg=document.getElementById('bgtile');bg.checked=!!s.bg;bg.closest('.check-toggle').classList.toggle('on',!!s.bg);document.getElementById('bgctl').style.display=s.bg?'grid':'none';const rx=Math.round((s.bgrx!=null?s.bgrx:0.16)*100);document.getElementById('bgrx').value=rx;document.getElementById('vbgrx').textContent=rx;document.getElementById('bgfill').value=s.bgfill||'#08090C';}
-function upd(){syncPanel();renderBig();renderCell(cur);}
+function updNow(){syncPanel();renderBig();renderCell(cur);}
+// Троттлинг: слайдеры шлют input до 120 раз/сек, а каждая пересборка = deep-clone базы + 2 lottie-инстанса.
+let updT=0,updP=null;
+function upd(){const now=performance.now(),left=150-(now-updT);if(left<=0){updT=now;updNow();return;}if(updP)return;updP=setTimeout(()=>{updP=null;updT=performance.now();updNow();},left);}
 function select(id){document.querySelectorAll('.cell').forEach(e=>e.classList.remove('sel'));document.getElementById('c_'+id).classList.add('sel');cur=id;syncPanel();renderBig();}
 document.getElementById('beats').oninput=e=>{state[cur].beats=parseInt(e.target.value);upd();};
 document.getElementById('custom').oninput=e=>{state[cur].color=e.target.value;state[cur].cycle=false;upd();};
@@ -254,9 +262,15 @@ function dl(b,n){const u=URL.createObjectURL(b);const a=document.createElement('
 function exportOne(){dl(tgs(cur),cur+'.tgs');}
 async function exportAll(){const z=new JSZip();ORDER.forEach(id=>z.file(id+'.tgs',tgs(id)));dl(await z.generateAsync({type:'blob'}),'dropweb_tgs.zip');}
 const genId=document.getElementById('genid'),promptEl=document.getElementById('prompt'),genColor=document.getElementById('gencolor'),statusEl=document.getElementById('genstatus'),fileEl=document.getElementById('pngfile');
+const genFit=document.getElementById('genfit'),vgenFit=document.getElementById('vgenfit'),genModel=document.getElementById('genmodel');
+genFit.oninput=e=>{vgenFit.textContent=e.target.value+'%';};
+function fitVal(){return parseInt(genFit.value,10)/100;}
+function modelVal(){return genModel.value||'';}
+genModel.onchange=()=>localStorage.setItem('dw_gen_model',genModel.value);
+async function loadGenModels(){try{const g=await fetch('/api/genconfig').then(r=>r.json());let ids=(g.models||[]).slice();if(g.default&&!ids.includes(g.default))ids.unshift(g.default);if(!ids.length)ids=['gpt-image-2'];genModel.innerHTML='';ids.forEach(id=>genModel.appendChild(new Option(id===g.default?id+' · default':id,id)));const saved=localStorage.getItem('dw_gen_model');genModel.value=(saved&&ids.includes(saved))?saved:(g.default||ids[0]);if(!g.key)genModel.title='нет CLIPROXY_KEY — генерация недоступна';}catch(e){genModel.innerHTML='';genModel.appendChild(new Option('gpt-image-2','gpt-image-2'));}}
 function slug(v){return (v||'').trim().toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'');}
 function setStatus(t,cls){statusEl.textContent=t||'';statusEl.className='status '+(cls||'');}
-function setGen(on,msg){const el=document.getElementById('genloader');if(el){el.hidden=!on;if(on&&msg){const t=el.querySelector('.gen-loader-txt');if(t)t.textContent=msg;}}['generate','regen','uploadBtn','save'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=on;});}
+function setGen(on,msg){const el=document.getElementById('genloader');if(el){el.hidden=!on;if(on&&msg){const t=el.querySelector('.gen-loader-txt');if(t)t.textContent=msg;}}['generate','regen','uploadBtn','save','refitBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=on;});}
 async function withButtonBusy(btn,text,fn){const old=btn.innerHTML;btn.disabled=true;btn.classList.add('loading');btn.innerHTML='<span class="inline-spin" aria-hidden="true"></span>'+text;try{return await fn();}finally{btn.innerHTML=old;btn.classList.remove('loading');btn.disabled=false;}}
 function mapKindToTgs(s){const k=(getLayers(s)[0]||{}).kind||'pulse_offset';return {preset:k.startsWith('el_')?k.slice(3):'pulse_offset',params:{},bg:!!s.bg};}
 function absorb(resp,source){const id=resp.id||slug(genId.value)||cur;BASES[id]=resp.base;if(!ORDER.includes(id)){ORDER.push(id);state[id]=defaultCfg(id);addCell(id);}ANCHORS[id]=resp.anchor||ANCHORS[id]||'';state[id].color=genColor.value;state[id].source=source;renderCell(id);select(id);setStatus(resp.warn||'готово ✓',resp.warn?'err':'ok');}
@@ -270,10 +284,11 @@ reffile.onchange=()=>{const f=reffile.files[0]; if(!f)return; const rd=new FileR
   rd.onload=()=>{refB64=rd.result; refimg.src=refB64; refthumb.style.display='flex';}; rd.readAsDataURL(f);};
 refclear.onclick=()=>{refB64=null; reffile.value=''; refthumb.style.display='none';};
 document.getElementById('autoprompt').onclick=async e=>{const btn=e.currentTarget;const idea=promptEl.value.trim();if(!idea){setStatus('введи идею','err');return;}await withButtonBusy(btn,'пишу промт…',async()=>{try{const r=await postJSON('/api/prompt',{idea});promptEl.value=r.prompt||promptEl.value;setStatus('промт готов ✓','ok');}catch(e){setStatus(e.message,'err');}});};
-document.getElementById('generate').onclick=async()=>{const id=slug(genId.value)||cur;setGen(true,'Генерация…');try{absorb(await postJSON('/api/generate',{prompt:promptEl.value,id,color:genColor.value,ref:refB64}), 'gen');}catch(e){setStatus(e.message,'err');}finally{setGen(false);}};
-document.getElementById('regen').onclick=async()=>{setGen(true,'Перегенерация…');try{absorb(await postJSON('/api/regenerate',{id:cur,prompt:promptEl.value}), 'gen');}catch(e){setStatus(e.message,'err');}finally{setGen(false);}};
+document.getElementById('generate').onclick=async()=>{const id=slug(genId.value)||cur;setGen(true,'Генерация…');try{absorb(await postJSON('/api/generate',{prompt:promptEl.value,id,color:genColor.value,ref:refB64,fit:fitVal(),model:modelVal()}), 'gen');}catch(e){setStatus(e.message,'err');}finally{setGen(false);}};
+document.getElementById('regen').onclick=async()=>{setGen(true,'Перегенерация…');try{absorb(await postJSON('/api/regenerate',{id:cur,prompt:promptEl.value,color:genColor.value,fit:fitVal(),model:modelVal()}), 'gen');}catch(e){setStatus(e.message,'err');}finally{setGen(false);}};
+document.getElementById('refitBtn').onclick=async()=>{if(!cur){setStatus('выбери эмодзи','err');return;}setGen(true,'Масштаб…');try{const s=state[cur]||{};const r=await postJSON('/api/refit',{id:cur,pack:currentPack,fit:fitVal(),color:s.color||genColor.value});BASES[cur]=r.base;renderCell(cur);renderBig();setStatus(r.warn||('масштаб '+genFit.value+'% применён ✓'),r.warn?'err':'ok');}catch(e){setStatus(e.message,'err');}finally{setGen(false);}};
 document.getElementById('uploadBtn').onclick=()=>fileEl.click();
-fileEl.onchange=()=>{const f=fileEl.files&&fileEl.files[0];if(!f)return;const rd=new FileReader();rd.onload=async()=>{setGen(true,'Обработка PNG…');try{const png_b64=String(rd.result).split(',')[1];absorb(await postJSON('/api/upload',{png_b64,id:slug(genId.value)||cur,color:genColor.value}), 'upload');}catch(e){setStatus(e.message,'err');}finally{setGen(false);}};rd.readAsDataURL(f);};
+fileEl.onchange=()=>{const f=fileEl.files&&fileEl.files[0];if(!f)return;const rd=new FileReader();rd.onload=async()=>{setGen(true,'Обработка PNG…');try{const png_b64=String(rd.result).split(',')[1];absorb(await postJSON('/api/upload',{png_b64,id:slug(genId.value)||cur,color:genColor.value,fit:fitVal()}), 'upload');}catch(e){setStatus(e.message,'err');}finally{setGen(false);}};rd.readAsDataURL(f);};
 document.getElementById('save').onclick=async()=>{try{const s=state[cur];await postJSON('/api/save',{pack:currentPack,id:cur,base:BASES[cur],spec:{source:s.source||'gen',prompt:promptEl.value,color:s.color,anchor:ANCHORS[cur],tgs:mapKindToTgs(s),studio:s},cfg:s});setStatus('сохранено ✓','ok');}catch(e){setStatus(e.message,'err');}};
 function fillPackSel(names,def){const sel=document.getElementById('packsel');sel.innerHTML='';(names||[]).forEach(n=>sel.appendChild(new Option(n,n)));if(def)sel.value=def;}
 function renderEmptyOrGrid(){if(ORDER.length===0){cur='';grid.innerHTML='<div class="emptygrid">Пусто. Создай из промта или загрузи PNG →</div>';if(big){try{big.destroy()}catch(e){}big=null;}document.getElementById('big').innerHTML='';document.getElementById('curname').textContent='—';document.getElementById('cur').textContent='—';}else{ORDER.forEach(id=>addCell(id));cur=ORDER[0];select(cur);}}
@@ -284,8 +299,14 @@ document.getElementById('renpack').onclick=async()=>{const to=slug(prompt('Но�
 document.getElementById('delpack').onclick=async()=>{if(currentPack==='dropweb'){setStatus('нельзя удалить пак по умолчанию','err');return;}if(!confirm('Удалить пак '+currentPack+'?'))return;try{await postJSON('/api/pack/delete',{name:currentPack});const r=await fetch('/api/packs').then(x=>x.json());fillPackSel(r.packs,r.default);document.getElementById('packsel').value=r.default;await loadPack(r.default);setStatus('пак удалён','ok');}catch(e){setStatus(e.message,'err');}};
 document.getElementById('delemoji').onclick=async()=>{if(!cur){return;}if(!confirm('Удалить эмодзи '+cur+'?'))return;try{await postJSON('/api/emoji/delete',{pack:currentPack,id:cur});const id=cur;delete BASES[id];const i=ORDER.indexOf(id);if(i>=0)ORDER.splice(i,1);delete state[id];const cell=document.getElementById('c_'+id);if(cell)cell.remove();if(players[id]){try{players[id].destroy()}catch(e){}delete players[id];}cur=ORDER[0]||'';if(cur){select(cur);}else{if(big){try{big.destroy()}catch(e){}big=null;}document.getElementById('big').innerHTML='';document.getElementById('curname').textContent='—';}setStatus('эмодзи удалён','ok');}catch(e){setStatus(e.message,'err');}};
 window.setBg=setBg;window.rnd=rnd;window.rndAll=rndAll;window.applyAll=applyAll;window.exportOne=exportOne;window.exportAll=exportAll;
-const pauseBtn=document.getElementById('pausebtn');if(pauseBtn)pauseBtn.onclick=()=>{paused=!paused;if(big){try{paused?big.pause():big.play();}catch(e){}}pauseBtn.textContent=paused?'▶':'⏸';pauseBtn.classList.toggle('on',paused);};
-document.addEventListener('visibilitychange',()=>{if(big){try{(document.hidden||paused)?big.pause():big.play();}catch(e){}}});
+const pauseBtn=document.getElementById('pausebtn');if(pauseBtn)pauseBtn.onclick=()=>{paused=!paused;syncBig();pauseBtn.textContent=paused?'▶':'⏸';pauseBtn.classList.toggle('on',paused);};
+// Автопауза: 10с без ввода — превью останавливается, любой ввод — возобновляется.
+function pokeIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{idlePaused=true;syncBig();},10000);if(idlePaused){idlePaused=false;syncBig();}}
+['pointermove','pointerdown','keydown','wheel'].forEach(ev=>window.addEventListener(ev,pokeIdle,{passive:true}));
+window.addEventListener('focus',syncBig);window.addEventListener('blur',syncBig);
+document.addEventListener('visibilitychange',syncBig);
+pokeIdle();
+loadGenModels();
 const pk=await fetch('/api/packs').then(r=>r.json()).catch(()=>({packs:['dropweb'],default:'dropweb'}));
 fillPackSel(pk.packs,pk.default);
 await loadPack(pk.default||'dropweb');

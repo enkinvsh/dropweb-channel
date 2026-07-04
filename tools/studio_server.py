@@ -22,6 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from urllib.parse import parse_qs, urlparse
 
+import requests
 from PIL import Image
 
 from . import build_emoji, svg2base, vectorize
@@ -222,12 +223,34 @@ def make_handler(pack_default, root):
                 names.insert(0, pack_default)
             self._send_json({"packs": names, "default": pack_default})
 
+        def _api_genconfig(self):
+            """Модели генерации из cliproxyapi: image-модели первыми + дефолт."""
+            key = os.environ.get("CLIPROXY_KEY")
+            out = {"default": gen_icon.MODEL, "base": gen_icon.BASE,
+                   "key": bool(key), "models": []}
+            if key:
+                try:
+                    r = requests.get(
+                        gen_icon.BASE + "/models",
+                        headers={"Authorization": "Bearer " + key}, timeout=6)
+                    r.raise_for_status()
+                    ids = sorted({m.get("id") for m in r.json().get("data", [])
+                                  if m.get("id")})
+                    out["models"] = ([i for i in ids if "image" in i.lower()] +
+                                     [i for i in ids if "image" not in i.lower()])
+                except Exception as e:
+                    out["error"] = str(e)
+            self._send_json(out)
+
         def do_GET(self):
             parsed = urlparse(self.path)
             path = parsed.path
             try:
                 if path == "/api/packs":
                     self._api_packs()
+                    return
+                if path == "/api/genconfig":
+                    self._api_genconfig()
                     return
                 if path == "/api/pack":
                     self._api_pack(parse_qs(parsed.query))
@@ -256,6 +279,7 @@ def make_handler(pack_default, root):
             prompt = body["prompt"]
             color = body.get("color")
             fit = body.get("fit")
+            model = body.get("model") or gen_icon.MODEL
             ref = body.get("ref")
             # Decode optional reference image up-front so a bad ref -> 400.
             ref_png = None
@@ -284,7 +308,7 @@ def make_handler(pack_default, root):
                     last = None
                     for attempt in range(3):
                         try:
-                            gen_icon.generate_edit(ref_png, _steer(prompt), tmp_png)
+                            gen_icon.generate_edit(ref_png, _steer(prompt), tmp_png, model=model)
                             last = None
                             break
                         except Exception as e:
@@ -293,7 +317,7 @@ def make_handler(pack_default, root):
                     if last is not None:
                         raise last
                 else:
-                    gen_icon.generate(_steer(prompt), tmp_png)
+                    gen_icon.generate(_steer(prompt), tmp_png, model=model)
                 raw_mask = _mask_from_gen_png(tmp_png)
                 base, groups = _pipeline_from_mask(raw_mask, eid, pack_default, fit, color)
             finally:
@@ -309,6 +333,7 @@ def make_handler(pack_default, root):
             prompt = body["prompt"]
             color = body.get("color")
             fit = body.get("fit")
+            model = body.get("model") or gen_icon.MODEL
             cwd = os.getcwd()
             os.chdir(root)
             try:
@@ -320,9 +345,9 @@ def make_handler(pack_default, root):
                     src = body["prev_png"]
                 out_png = os.path.join(gen_dir, "%s.png" % eid)
                 if src:
-                    gen_icon.generate_edit(src, _steer(prompt), out_png)
+                    gen_icon.generate_edit(src, _steer(prompt), out_png, model=model)
                 else:
-                    gen_icon.generate(_steer(prompt), out_png)
+                    gen_icon.generate(_steer(prompt), out_png, model=model)
                 raw_mask = _mask_from_gen_png(out_png)
                 base, groups = _pipeline_from_mask(raw_mask, eid, pack_default, fit, color)
             finally:
@@ -352,6 +377,37 @@ def make_handler(pack_default, root):
             os.chdir(root)
             try:
                 base, groups = _pipeline_from_mask(raw_mask, eid, pack_default, fit, color)
+            finally:
+                os.chdir(cwd)
+            warn = ("Слишком детально (%d частей) — упрости промт" % groups) if groups > GROUP_CAP else None
+            self._send_json({"id": eid, "base": base, "anchor": "", "groups": groups, "warn": warn})
+
+        def _h_refit(self, body):
+            """Переподгонка масштаба (fit) из сохранённой маски — без генерации."""
+            eid = body["id"]
+            fit = body.get("fit")
+            color = body.get("color")
+            pack = body.get("pack", pack_default)
+            raw = None
+            for cand in (
+                os.path.join(root, "build", pack, "masks", "%s.png" % eid),
+                os.path.join(root, "build", pack_default, "masks", "%s.png" % eid),
+            ):
+                if os.path.isfile(cand):
+                    raw = Image.open(cand).convert("L")
+                    break
+            if raw is None:
+                gen_png = os.path.join(root, "build", "gen", "%s.png" % eid)
+                if os.path.isfile(gen_png):
+                    raw = _mask_from_gen_png(gen_png)
+            if raw is None:
+                self._send_json(
+                    {"error": "нет сохранённой маски для %s — перегенери или загрузи PNG" % eid}, 404)
+                return
+            cwd = os.getcwd()
+            os.chdir(root)
+            try:
+                base, groups = _pipeline_from_mask(raw, eid, pack_default, fit, color)
             finally:
                 os.chdir(cwd)
             warn = ("Слишком детально (%d частей) — упрости промт" % groups) if groups > GROUP_CAP else None
@@ -519,6 +575,7 @@ def make_handler(pack_default, root):
                 "/api/prompt": self._h_prompt,
                 "/api/regenerate": self._h_regenerate,
                 "/api/upload": self._h_upload,
+                "/api/refit": self._h_refit,
                 "/api/save": self._h_save,
                 "/api/pack/create": self._h_pack_create,
                 "/api/pack/delete": self._h_pack_delete,
