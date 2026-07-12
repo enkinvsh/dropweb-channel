@@ -4,7 +4,7 @@
 никогда не хардкодим:
   CLIPROXY_BASE (по умолчанию http://localhost:8317/v1)
   CLIPROXY_KEY  (обязательно)
-  DW_TEXT_MODEL (по умолчанию gpt-5.5)
+  DW_TEXT_MODEL (по умолчанию gpt-5.6-terra)
 
 Агент описывает ТОЛЬКО сюжет/композицию иконки. Стиль (flat neon vector,
 чёрный фон, неон-зелёный) дописывается детерминированно в studio_server._steer,
@@ -13,12 +13,43 @@
 Self-test: `.venv/bin/python3 -m tools.gen_prompt "пингвин с ноутбуком"`.
 """
 import os
+import re
 import sys
 
 import requests
 
 BASE = os.environ.get("CLIPROXY_BASE", "http://localhost:8317/v1")
-TEXT_MODEL = os.environ.get("DW_TEXT_MODEL", "gemini-2.5-flash")
+TEXT_MODEL = os.environ.get("DW_TEXT_MODEL", "gpt-5.6-terra")
+
+# Детерминированный транслит RU->latin для slug-а из идеи (без сети).
+_TRANSLIT = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "i", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch",
+    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+}
+
+
+def idea_slug(idea):
+    """Идея (RU/EN) -> детерминированный latin slug для id иконки.
+
+    Транслит кириллицы, lowercase, всё вне [a-z0-9_-] -> '-', схлопывание
+    повторов '-', обрезка по краям, максимум 32 символа. Если результат
+    пустой или не проходит валидацию -> 'icon'."""
+    s = (idea or "").lower()
+    out = []
+    for ch in s:
+        out.append(_TRANSLIT.get(ch, ch))
+    s = "".join(out)
+    s = re.sub(r"[^a-z0-9_-]+", "-", s)
+    s = re.sub(r"-{2,}", "-", s)
+    s = s.strip("-")
+    if len(s) > 32:
+        s = s[:32].rstrip("-")
+    if not re.match(r"^[a-z0-9][a-z0-9_-]{0,31}$", s):
+        return "icon"
+    return s
 
 SYSTEM = (
     "You are a prompt engineer for a neon sticker studio. The user gives a short idea "
@@ -55,7 +86,8 @@ def rewrite_prompt(idea, model=None, timeout=45):
                 {"role": "user", "content": idea},
             ],
             "temperature": 0.8,
-            "max_tokens": 200,
+            "reasoning_effort": "low",
+            "max_tokens": 400,
         },
         timeout=timeout,
     )

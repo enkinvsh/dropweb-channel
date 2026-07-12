@@ -1,17 +1,5 @@
 #!/usr/bin/env bash
-# dropweb-studio — запуск студии стикеров dropweb (с ключом генерации) + открыть браузер
+# dropweb-studio — тонкая обёртка: канонический запуск студии живёт в run.sh.
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-cd "$DIR"
-PORT="${1:-8765}"
-# Уже запущена? — не плодим вкладки и дубли сервера.
-if curl -sf -o /dev/null --max-time 1 "http://localhost:$PORT/api/packs" 2>/dev/null; then
-  echo "dropweb studio уже запущена -> http://localhost:$PORT  (вкладку не открываю)"
-  exit 0
-fi
-: "${CLIPROXY_KEY:=$(grep -oE 'sk-[a-f0-9]{32,}' "$HOME/.cli-proxy-api/cliproxyapi.conf.staged" 2>/dev/null | head -1 || true)}"
-export CLIPROXY_KEY
-( sleep 1.6; command -v open >/dev/null && open "http://localhost:$PORT" >/dev/null 2>&1 || true ) &
-if [ -n "${CLIPROXY_KEY:-}" ]; then KEYSTATE="есть"; else KEYSTATE="НЕТ — будет только upload/тюнинг"; fi
-echo "dropweb studio -> http://localhost:$PORT  (ключ генерации: $KEYSTATE)"
-exec .venv/bin/python3 -m tools.studio_server --port "$PORT"
+exec "$DIR/run.sh" studio "$@"
