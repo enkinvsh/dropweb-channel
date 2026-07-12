@@ -1,0 +1,200 @@
+{
+  "meta": {
+    "name": "dropweb-gpt",
+    "default_color": "#00DE52"
+  },
+  "emoji": [
+    {
+      "id": "pixel-glasses",
+      "anchor": "",
+      "source": "pack-ref",
+      "prompt": "The recognizable Dropweb glasses emblem built from chunky rectangular segments, centered as one compact symmetrical silhouette with two large square eye openings.",
+      "color": "#00de52",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {},
+        "bg": false
+      },
+      "studio": {
+        "layers": [
+          {
+            "kind": "beat",
+            "amp": 14,
+            "ov": 10,
+            "dir": 1,
+            "phase": 0
+          }
+        ],
+        "beats": 1,
+        "color": "#00de52",
+        "cycle": false,
+        "outline": false,
+        "width": 14,
+        "bg": false,
+        "bgrx": 0.16,
+        "bgfill": "#08090C",
+        "source": "pack-ref"
+      }
+    },
+    {
+      "id": "glasses-portal",
+      "anchor": "",
+      "source": "pack-ref",
+      "prompt": "The segmented Dropweb glasses emblem with a bold open portal visible between the lenses, centered as one compact symbol with a deep rectangular opening.",
+      "color": "#00de52",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {},
+        "bg": false
+      },
+      "studio": {
+        "layers": [
+          {
+            "kind": "beat",
+            "amp": 14,
+            "ov": 10,
+            "dir": 1,
+            "phase": 0
+          }
+        ],
+        "beats": 1,
+        "color": "#00de52",
+        "cycle": false,
+        "outline": false,
+        "width": 14,
+        "bg": false,
+        "bgrx": 0.16,
+        "bgfill": "#08090C",
+        "source": "pack-ref"
+      }
+    },
+    {
+      "id": "ai-gateway",
+      "anchor": "",
+      "source": "pack-ref",
+      "prompt": "A sturdy gateway arch made of chunky connected blocks, with a simplified spark-shaped AI core visible inside the central opening, centered.",
+      "color": "#00de52",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {},
+        "bg": false
+      },
+      "studio": {
+        "layers": [
+          {
+            "kind": "beat",
+            "amp": 14,
+            "ov": 10,
+            "dir": 1,
+            "phase": 0
+          }
+        ],
+        "beats": 1,
+        "color": "#00de52",
+        "cycle": false,
+        "outline": false,
+        "width": 14,
+        "bg": false,
+        "bgrx": 0.16,
+        "bgfill": "#08090C",
+        "source": "pack-ref"
+      }
+    },
+    {
+      "id": "global-route",
+      "anchor": "",
+      "source": "pack-ref",
+      "prompt": "A simplified globe held inside a thick open route loop, with one bold curved path entering and exiting the globe, centered as a single compact symbol.",
+      "color": "#00de52",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {},
+        "bg": false
+      },
+      "studio": {
+        "layers": [
+          {
+            "kind": "beat",
+            "amp": 14,
+            "ov": 10,
+            "dir": 1,
+            "phase": 0
+          }
+        ],
+        "beats": 1,
+        "color": "#00de52",
+        "cycle": false,
+        "outline": false,
+        "width": 14,
+        "bg": false,
+        "bgrx": 0.16,
+        "bgfill": "#08090C",
+        "source": "pack-ref"
+      }
+    },
+    {
+      "id": "loading-glasses",
+      "anchor": "",
+      "source": "pack-ref",
+      "prompt": "The Dropweb segmented glasses emblem resting on a thick partially filled loading bar, centered, with no labels or numbers.",
+      "color": "#00de52",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {},
+        "bg": false
+      },
+      "studio": {
+        "layers": [
+          {
+            "kind": "beat",
+            "amp": 14,
+            "ov": 10,
+            "dir": 1,
+            "phase": 0
+          }
+        ],
+        "beats": 1,
+        "color": "#00de52",
+        "cycle": false,
+        "outline": false,
+        "width": 14,
+        "bg": false,
+        "bgrx": 0.16,
+        "bgfill": "#08090C",
+        "source": "pack-ref"
+      }
+    },
+    {
+      "id": "glitch-panic",
+      "anchor": "",
+      "source": "pack-ref",
+      "prompt": "A chunky broken plug with a jagged split and a small blocky shocked face inside its socket opening, centered as one compact silhouette.",
+      "color": "#00de52",
+      "tgs": {
+        "preset": "pulse_offset",
+        "params": {},
+        "bg": false
+      },
+      "studio": {
+        "layers": [
+          {
+            "kind": "beat",
+            "amp": 14,
+            "ov": 10,
+            "dir": 1,
+            "phase": 0
+          }
+        ],
+        "beats": 1,
+        "color": "#00de52",
+        "cycle": false,
+        "outline": false,
+        "width": 14,
+        "bg": false,
+        "bgrx": 0.16,
+        "bgfill": "#08090C",
+        "source": "pack-ref"
+      }
+    }
+  ]
+}
