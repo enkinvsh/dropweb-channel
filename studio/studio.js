@@ -18,7 +18,7 @@ function kfh(t,v){v=Array.isArray(v)?v:[v];return {t:Math.round(t),s:v,h:1};}
 function A(a){return {a:1,k:a};} function K(v){return {a:0,k:v};}
 
 function buildProps(kind,B,amp,ov){
-  const a=amp,u=ov; let s=K([100,100,100]),r=K(0),o=K(100),p=K([256,256,0]),an=null,sk=null,sa=null;
+  const a=amp,u=ov,E=Math.min(a*5,40); let s=K([100,100,100]),r=K(0),o=K(100),p=K([256,256,0]),an=null,sk=null,sa=null;
   const SC=q=>A(q.map(([f,v,e])=>kf(f*B,[v,v,100],e)));
   const XY=q=>A(q.map(([f,x,y,e])=>kf(f*B,[x,y,100],e)));
   const RO=q=>A(q.map(([f,v,e])=>kf(f*B,[v],e)));
@@ -31,7 +31,7 @@ function buildProps(kind,B,amp,ov){
    case"heartbeat": s=SC([[0,100,EZ],[0.1,100+a*1.6,EZ],[0.22,100,EZ],[0.34,100+a,EZ],[0.5,100-u*0.2,ES],[1,100]]);break;
    case"pulse": s=SC([[0,100,EZ],[0.5,100+a*1.4,EZ],[1,100]]);break;
    case"zoom": s=SC([[0,100,ES],[0.5,100+a*2,ES],[1,100]]);break;
-   case"pop": s=SC([[0,60,EZ],[0.22,100+a,EI],[0.4,100-u*0.3,ES],[0.75,100,ES],[1,60,ES]]);break;
+   case"pop": s=SC([[0,100,EZ],[0.18,60,EZ],[0.38,100+a,EI],[0.55,100-u*0.3,ES],[0.8,100,ES],[1,100]]);break;
    case"elastic": s=SC([[0,100,EZ],[0.15,100+a*1.8,EZ],[0.32,100-a*0.9,EZ],[0.48,100+a*0.9,EZ],[0.64,100-a*0.4,EZ],[0.8,100+a*0.15,ES],[1,100]]);break;
    case"neon": s=SC([[0,100,EZ],[0.12,100+a*1.6,EI],[0.3,100,ES],[1,100]]);break;
    case"squash": s=XY([[0,100,100,EZ],[0.18,100+a,100-a,EZ],[0.4,100-a*0.5,100+a*0.5,ES],[0.6,100,100,ES],[1,100,100]]);break;
@@ -45,15 +45,15 @@ function buildProps(kind,B,amp,ov){
    case"spin3d": s=XY([[0,100,100,ES],[0.25,6,100,ES],[0.5,-100,100,ES],[0.75,6,100,ES],[1,100,100]]);break;
    case"tumble": r=A([kf(0,[0],{o:{x:[0.5],y:[0.5]},i:{x:[0.5],y:[0.5]}}),kf(B,[360])]);s=XY([[0,100,100,ES],[0.5,8,100,ES],[1,100,100]]);break;
    case"spin": r=A([kf(0,[0],{o:{x:[0.5],y:[0.5]},i:{x:[0.5],y:[0.5]}}),kf(B,[360])]);break;
-   case"popspin": r=A([kf(0,[0],{o:{x:[0.5],y:[0.5]},i:{x:[0.5],y:[0.5]}}),kf(B,[360])]);s=SC([[0,55,EZ],[0.3,100+a,EI],[0.5,100,ES],[1,100]]);break;
+   case"popspin": r=A([kf(0,[0],{o:{x:[0.5],y:[0.5]},i:{x:[0.5],y:[0.5]}}),kf(B,[360])]);s=SC([[0,100,EZ],[0.2,55,EZ],[0.4,100+a,EI],[0.6,100,ES],[1,100]]);break;
    case"tick": r=A([kfh(0,[0]),kfh(0.25*B,[90]),kfh(0.5*B,[180]),kfh(0.75*B,[270]),kf(B,[360])]);break;
    case"ring": r=RO([[0,0,EZ],[0.1,a*1.3,EZ],[0.28,-a,EZ],[0.45,a*0.6,EZ],[0.62,-a*0.35,EZ],[0.8,a*0.15,EZ],[1,0]]);break;
    case"swing": r=RO([[0,0,ES],[0.25,a,ES],[0.5,0,ES],[0.75,-a,ES],[1,0]]);break;
    case"wobble": r=RO([[0,0,ES],[0.25,a*0.5,ES],[0.5,0,ES],[0.75,-a*0.5,ES],[1,0]]);s=XY([[0,100,100,ES],[0.5,100+a*0.3,100-a*0.3,ES],[1,100,100]]);break;
    case"bounce": p=PO([[0,256,EZ],[0.32,256-a*2.6,EI],[0.55,256,EZ],[0.7,256-a*0.8,ES],[1,256]]);s=XY([[0,100,100,ES],[0.5,100+a*0.5,100-a*0.5,EZ],[0.62,100,100,ES],[1,100,100]]);break;
    case"hop": p=PO([[0,256,EZ],[0.5,256-a*3,EI],[1,256]]);s=XY([[0,100,100,ES],[0.5,100-a*0.3,100+a*0.3,ES],[1,100,100]]);break;
-   case"drop": p=PO([[0,256-a*5,ES],[0.5,256,EI],[0.64,256-a*1.1,ES],[0.78,256,EI],[1,256-a*5,ES]]);break;
-   case"rise": p=PO([[0,256+a*5,ES],[0.55,256,EZ],[0.82,256,ES],[1,256+a*5,ES]]);break;
+   case"drop": p=PO([[0,256,ES],[0.3,256-E,ES],[0.55,256,EI],[0.68,256-E*0.35,ES],[0.82,256,EI],[1,256]]);break;
+   case"rise": p=PO([[0,256,ES],[0.3,256+E,ES],[0.65,256,EZ],[1,256]]);break;
    case"vibrate": p=A(Array.from({length:9},(_,i)=>kf(i/8*B,[256+(i%2?a*0.4:-a*0.4),256,0],ES)));break;
    case"shake": p=PO([[0,256,ES],[0.12,256-a*0.6,ES],[0.26,256+a*0.6,ES],[0.4,256-a*0.4,ES],[0.54,256+a*0.4,ES],[0.7,256,ES],[1,256]]);break;
    case"twinkle": s=SC([[0,100,EZ],[0.5,100+a*1.6,EZ],[1,100]]);r=RO([[0,0,ES],[0.5,22,ES],[1,0]]);break;
