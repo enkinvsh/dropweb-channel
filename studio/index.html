@@ -498,7 +498,7 @@ input.pr-slug,input.pr-idea{min-height:34px}
           <section class="sect-card">
             <h3>Текущий стикер</h3>
             <div class="sub" id="expName">—</div>
-            <div class="hint">Telegram emoji · 100×100 · 60 fps · loop</div>
+            <div class="hint">Telegram emoji · .tgs 512×512 · 60 fps · loop</div>
             <button class="btn primary" type="button" onclick="exportOne()">Скачать выбранный .tgs</button>
           </section>
           <section class="sect-card">
@@ -591,7 +591,7 @@ document.getElementById('bgfill').oninput=e=>{if(state[cur]){state[cur].bgfill=e
 function rnd(cz){if(!cur)return;state[cur]=randomCfg(cz);upd();}
 function rndAll(){ORDER.forEach(id=>{state[id]=randomCfg();dirty.add(id);renderCell(id);});renderBig();syncPanel();updSaveBar();}
 function applyAll(){const s=cfg(cur);if(!s)return;const layers=getLayers(s).map(L=>Object.assign({},L));ORDER.forEach(id=>{state[id]={layers:layers.map(L=>Object.assign({},L)),beats:s.beats,color:s.color,cycle:s.cycle,outline:s.outline,width:s.width,bg:s.bg,bgrx:s.bgrx,bgfill:s.bgfill};dirty.add(id);renderCell(id);});updSaveBar();}
-function tgs(id){return new Blob([pako.gzip(JSON.stringify(toEmoji100(makeAnimX(BASES[id],cfg(id)))))],{type:'application/gzip'});}
+function tgs(id){return new Blob([pako.gzip(JSON.stringify(toTgs(makeAnimX(BASES[id],cfg(id)))))],{type:'application/gzip'});}
 function dl(b,n){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=n;a.click();URL.revokeObjectURL(u);}
 function exportOne(){if(!cur)return;dl(tgs(cur),cur+'.tgs');}
 async function exportAll(){const z=new JSZip();ORDER.forEach(id=>z.file(id+'.tgs',tgs(id)));dl(await z.generateAsync({type:'blob'}),currentPack+'_tgs.zip');}

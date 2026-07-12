@@ -172,16 +172,11 @@ const PRESETS_BRAND={
 };
 
 function randomCfg(crazy){const pick=()=>KINDS[Math.floor(Math.random()*(KINDS.length-1))];const k1=pick();const mix=crazy?Math.random()<0.8:Math.random()<0.4;const k2=mix?pick():null;const pal=["#00DE52","#00DE52","#38BDF8","#A78BFA","#EF4444","#F59E0B","#FFFFFF"];const mk=k=>({kind:k,amp:(crazy?20:8)+Math.floor(Math.random()*30),ov:Math.floor(Math.random()*(crazy?30:22)),dir:Math.random()<0.5?1:-1,phase:mix?Math.round(Math.random()*100)/100:0});const layers=k2?[mk(k1),mk(k2)]:[mk(k1)];return {layers,beats:(BEATS_DEFAULT[k1]||1),color:pal[Math.floor(Math.random()*pal.length)],cycle:crazy?Math.random()<0.5:Math.random()<0.15,outline:crazy?Math.random()<0.6:Math.random()<0.25,width:10+Math.floor(Math.random()*14)};}
-// Telegram custom emoji tgs require a 100x100 canvas. Wrap a 512x512 makeAnimX output:
-// scale everything down via one master null (100/512=0.1953125 → 19.53125%), re-parenting root layers.
-function toEmoji100(anim){
+// Telegram animated .tgs stays 512x512; only add the bodymovin/tgs metadata its validator requires.
+function toTgs(anim){
   const a=JSON.parse(JSON.stringify(anim));
-  a.w=100;a.h=100;
   a.tgs=1; if(!a.v)a.v='5.5.2'; if(a.ddd==null)a.ddd=0; if(!a.assets)a.assets=[]; if(!a.nm)a.nm='emoji';
-  const nullLayer={ty:3,ind:8000,ip:0,op:a.op,st:0,sr:1,ks:{a:{a:0,k:[0,0]},p:{a:0,k:[0,0]},s:{a:0,k:[19.53125,19.53125,100]},r:{a:0,k:0},o:{a:0,k:100}}};
-  (a.layers||[]).forEach(L=>{if(L.parent==null)L.parent=8000;});
-  (a.layers||(a.layers=[])).push(nullLayer);
   return a;
 }
-if (typeof window !== 'undefined') { window.makeAnimX=makeAnimX;window.toEmoji100=toEmoji100;window.KINDS=KINDS;window.CATS=CATS;window.BEATS_DEFAULT=BEATS_DEFAULT;window.randomCfg=randomCfg;window.applyElementAnim=applyElementAnim;window.PRESETS_BRAND=PRESETS_BRAND;window.cfgLayers=cfgLayers; }
-if (typeof module !== 'undefined' && module.exports) { module.exports = {makeAnimX, toEmoji100, KINDS, CATS, BEATS_DEFAULT, randomCfg, applyElementAnim, PRESETS_BRAND, cfgLayers}; }
+if (typeof window !== 'undefined') { window.makeAnimX=makeAnimX;window.toTgs=toTgs;window.KINDS=KINDS;window.CATS=CATS;window.BEATS_DEFAULT=BEATS_DEFAULT;window.randomCfg=randomCfg;window.applyElementAnim=applyElementAnim;window.PRESETS_BRAND=PRESETS_BRAND;window.cfgLayers=cfgLayers; }
+if (typeof module !== 'undefined' && module.exports) { module.exports = {makeAnimX, toTgs, KINDS, CATS, BEATS_DEFAULT, randomCfg, applyElementAnim, PRESETS_BRAND, cfgLayers}; }

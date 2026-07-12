@@ -15,7 +15,7 @@ for(const id of (B.order||Object.keys(B.bases||{}))){
   const base=B.bases[id]; if(!base){console.error('no base for',id);continue;}
   const spec=specById[id]||{};
   const cfg=spec.studio || defaultCfg(id);
-  const anim=S.toEmoji100(S.makeAnimX(JSON.parse(JSON.stringify(base)), cfg));
+  const anim=S.toTgs(S.makeAnimX(JSON.parse(JSON.stringify(base)), cfg));
   const tgs=zlib.gzipSync(Buffer.from(JSON.stringify(anim)));
   const fp=path.join(outDir, id+'.tgs'); fs.writeFileSync(fp,tgs);
   const kb=tgs.length/1024; ok++; if(kb>64) over.push(id+' '+kb.toFixed(1)+'KB');
