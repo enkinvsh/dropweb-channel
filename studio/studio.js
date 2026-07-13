@@ -146,7 +146,7 @@ function makeAnimX(base,opt){
   if(layers.some(L=>L.kind==="drawon")){icon.forEach(L=>drawOn(L.shapes,N,[rgb[0],rgb[1],rgb[2],1],!!opt.outline));layers=layers.filter(L=>L.kind!=="drawon");}
   const elLayers=layers.filter(L=>L.kind.startsWith("el_"));const wholeLayers=layers.filter(L=>!L.kind.startsWith("el_"));
   elLayers.forEach(L=>applyElementAnim(icon,L.kind,N,L.amp,L.ov));
-  if(!wholeLayers.length){a.layers=icon;if(opt.bg)a.layers.push(bgLayer(a.w,a.h,N, opt.bgrx, opt.bgfill));return a;}
+  if(!wholeLayers.length){a.layers=icon;if(opt.bg)a.layers.push(bgLayer(a.w,a.h,N, opt.bgrx, opt.bgfill));normalizeTerminalKeyframes(a);return a;}
   let prev=null;
   wholeLayers.forEach((L,i)=>{
     const ind=9000+i;const pr=buildProps(L.kind,N,L.amp,L.ov);
@@ -158,7 +158,7 @@ function makeAnimX(base,opt){
   });
   icon.forEach(L=>{L.parent=prev;});
   if(opt.bg)a.layers.push(bgLayer(a.w,a.h,N, opt.bgrx, opt.bgfill));
-  return a;
+  normalizeTerminalKeyframes(a);return a;
 }
 
 // ===== Бренд-пресеты (сюжеты из docs/animation-playbook.md). Только данные: layer-stack + цвет. =====
@@ -172,11 +172,36 @@ const PRESETS_BRAND={
 };
 
 function randomCfg(crazy){const pick=()=>KINDS[Math.floor(Math.random()*(KINDS.length-1))];const k1=pick();const mix=crazy?Math.random()<0.8:Math.random()<0.4;const k2=mix?pick():null;const pal=["#00DE52","#00DE52","#38BDF8","#A78BFA","#EF4444","#F59E0B","#FFFFFF"];const mk=k=>({kind:k,amp:(crazy?20:8)+Math.floor(Math.random()*30),ov:Math.floor(Math.random()*(crazy?30:22)),dir:Math.random()<0.5?1:-1,phase:mix?Math.round(Math.random()*100)/100:0});const layers=k2?[mk(k1),mk(k2)]:[mk(k1)];return {layers,beats:(BEATS_DEFAULT[k1]||1),color:pal[Math.floor(Math.random()*pal.length)],cycle:crazy?Math.random()<0.5:Math.random()<0.15,outline:crazy?Math.random()<0.6:Math.random()<0.25,width:10+Math.floor(Math.random()*14)};}
-// Telegram animated .tgs stays 512x512; only add the bodymovin/tgs metadata its validator requires.
+// ===== rlottie (Telegram) COMPATIBILITY: terminal-keyframe normalization =====
+// ROOT CAUSE of "studio ok, Telegram flickers/blanks": kf() (line 16) emits out/in bezier
+// tangents (o/i) on EVERY keyframe — including the terminal sentinel at t=op that merely closes
+// the last interval. Telegram's rlottie parser (lottieparser.cpp parseKeyFrame) sees the
+// interpolator, PUSHES that sentinel as a real segment with endFrame=0 and a DEFAULT end value,
+// then LOTAnimInfo::value returns that default for every frame after 0 -> animated scale/pos
+// collapse to (0,0) -> the glyph shows on frame 0 (thumbnail) then vanishes each loop. lottie-web
+// (studio) ignores the dangling handles, so studio looked fine while Telegram shimmered.
+// FIX: turn each animated property's terminal keyframe into a pure {t,s} marker (drop i/o/e/n/h)
+// and collapse single-keyframe "animations" to static. Called in makeAnimX so the studio preview
+// and the exported .tgs share ONE canonical structure. Proven frame-by-frame vs rlottie 1.3.8
+// across all 59 kinds (2026-07-13, with gpt-5.6-sol).
+function normalizeTerminalKeyframes(node){
+  if(!node||typeof node!=='object') return node;
+  if(node.a===1 && Array.isArray(node.k) && node.k.length &&
+     node.k.every(f=>f&&typeof f==='object'&&Number.isFinite(f.t)&&('s' in f))){
+    if(node.k.length===1){ node.a=0; node.k=node.k[0].s; return node; }
+    const last=node.k[node.k.length-1];
+    delete last.i; delete last.o; delete last.e; delete last.n; delete last.h;
+  }
+  for(const key in node){ const v=node[key]; if(v&&typeof v==='object') normalizeTerminalKeyframes(v); }
+  return node;
+}
+// Telegram animated .tgs stays 512x512; add the bodymovin/tgs metadata its validator requires.
+// Keyframes are already rlottie-safe via makeAnimX; re-normalize defensively for direct callers.
 function toTgs(anim){
   const a=JSON.parse(JSON.stringify(anim));
   a.tgs=1; if(!a.v)a.v='5.5.2'; if(a.ddd==null)a.ddd=0; if(!a.assets)a.assets=[]; if(!a.nm)a.nm='emoji';
+  normalizeTerminalKeyframes(a);
   return a;
 }
 if (typeof window !== 'undefined') { window.makeAnimX=makeAnimX;window.toTgs=toTgs;window.KINDS=KINDS;window.CATS=CATS;window.BEATS_DEFAULT=BEATS_DEFAULT;window.randomCfg=randomCfg;window.applyElementAnim=applyElementAnim;window.PRESETS_BRAND=PRESETS_BRAND;window.cfgLayers=cfgLayers; }
-if (typeof module !== 'undefined' && module.exports) { module.exports = {makeAnimX, toTgs, KINDS, CATS, BEATS_DEFAULT, randomCfg, applyElementAnim, PRESETS_BRAND, cfgLayers}; }
+if (typeof module !== 'undefined' && module.exports) { module.exports = {makeAnimX, toTgs, normalizeTerminalKeyframes, KINDS, CATS, BEATS_DEFAULT, randomCfg, applyElementAnim, PRESETS_BRAND, cfgLayers}; }
