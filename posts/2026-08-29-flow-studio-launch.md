@@ -12,6 +12,7 @@
 ## Готовый rich-HTML
 
 ```html
+<img src="https://raw.githubusercontent.com/enkinvsh/dropweb-channel/main/posts/assets/flow-studio-hero.png"/>
 <h2><tg-emoji emoji-id="5444968063931817207">🆕</tg-emoji> Flow.Studio — студия промптов для картинок <tg-emoji emoji-id="5442899912624744398">💚</tg-emoji></h2>
 <p>Нейросеть рисует ровно то, что вы попросили. Беда в том, что попросить одной строкой почти невозможно: «парень у мотоцикла под дождём» — и модель каждый раз сама додумывает за вас свет, оптику, одежду и фон. Получается лотерея.</p>
 <p>Мы собрали <b>Flow.Studio</b> — конструктор, который превращает идею в строгий JSON из семи секций. Вы правите ровно то, что хотели, остальное остаётся на месте. Работает в браузере, ставить ничего не нужно: <a href="https://flow.dropweb.org">flow.dropweb.org</a>.</p>
@@ -39,16 +40,18 @@
 <p><code>FLOW-JEWK-CV2W-R4GC</code><br/><code>FLOW-6J3S-EW3F-QHAY</code><br/><code>FLOW-JAW8-F284-KC3E</code><br/><code>FLOW-4HSQ-GEAE-VQMW</code><br/><code>FLOW-YWFY-QRZY-C36T</code><br/><code>FLOW-QEPP-8TZX-RNKW</code><br/><code>FLOW-SN5E-ZFNG-YQ3C</code><br/><code>FLOW-2ZT9-G5KG-APYF</code><br/><code>FLOW-A5W5-2YMD-HWNY</code><br/><code>FLOW-UXEW-7HM2-ZGZN</code></p>
 <p>Код не подошёл — значит, его уже забрали. Напишите нам, добавим ещё.</p>
 <hr/>
-<footer>Flow.Studio · <a href="https://flow.dropweb.org">flow.dropweb.org</a> · вопросы — в <a href="https://t.me/dropwebpay_bot">бота поддержки</a></footer>
+<p>Flow.Studio · <a href="https://flow.dropweb.org">flow.dropweb.org</a> · вопросы — в <a href="https://t.me/dropwebpay_bot">бота поддержки</a></p>
 ```
 
-Баннер: если нужен, первой строкой добавляется `<img src="https://.../flow-studio-hero.png"/>` — картинка обязана лежать по https (rich-режим отдельное медиа-поле запрещает). Скриншот студии готов: `/Users/mac/Documents/projects/flow-studio-hero.png` (1440×900).
+Баннер: `posts/assets/flow-studio-hero.png` (1440×900, 336 КБ), отдаётся по `https://raw.githubusercontent.com/enkinvsh/dropweb-channel/main/posts/assets/flow-studio-hero.png` — проверено 200, image/png. Уже вшит первой строкой поста.
+
+`<footer>` заменён на `<p>`: схема TipTap в композере кабинета узла `footer` не знает и свернула бы его в абзац — так вставка проходит без потерь.
 
 ## Проверено, не на слово
 
 - Настоящий `validate_rich_content` из `zenbot/app/services/channel_post_render.py` (импорты aiogram/pydantic отфильтрованы, exec исходника) → **PASS**.
-- 2989 отрендеренных символов из 32000; медиа 0/50; сырых `&` — 0.
-- Теги: `a b br code footer h2 h4 hr p tg-emoji` — все в `RICH_ALLOWED_TAGS`.
+- 2990 отрендеренных символов из 32000; медиа 1/50 (баннер); сырых `&` — 0.
+- Теги: `a b br code h2 h4 hr img p tg-emoji` — все в `RICH_ALLOWED_TAGS` И все в схеме TipTap, то есть композер кабинета не теряет ни одного узла.
 - Все 9 emoji-id сверены с живым `PACK` из `dropweb-app/.github/scripts/notify_telegram.py` — фолбэк-символ совпадает у каждого.
 - Обе исходящие ссылки пробиты живьём: 200 без увода редиректом.
 - **Регистрация проверена end-to-end на бою** отдельным QA-кодом (не из этих десяти): register → 200, авторизованный `/api/library/templates` → 200, аноним → 401, повторное использование кода → 400 «Invalid or expired invite code». QA-юзер отключён, QA-код отозван.
@@ -63,3 +66,16 @@
 
 Тёплый, «вы», короткие фразы, эффект вместо жаргона — по `dropweb_release_notes_tone_rule` и брифу владельца «у нас не клиенты а семья».
 Структура повторяет посты канала: эмодзи-заголовок → интро → секции по 2–3 предложения.
+
+## Публикация через кабинет (решение владельца)
+
+1. Открыть `posts/richcopy.html` двойным кликом → кнопка **«Загрузить пост Flow.Studio»** → **«Скопировать как HTML»** (или ⌘+Enter в поле).
+2. `cab.dropweb.org` → админка → посты в канал → включить тумблер **«Rich-пост»**.
+3. В поле редактора ⌘A, Delete, затем ⌘V. Проверить предпросмотр и отправить.
+
+Проверено вживую (Playwright + локальный http-сервер + osascript): после клика системный буфер содержит флейвор
+`«class HTML»` на 4132 символа — 9 `tg-emoji`, 1 `img`, 7 `h4`, 10 `code` с кодами, кириллица цела, ссылка на баннер на месте.
+Копировать надо именно отрендеренное; исходник из markdown кладёт только `text/plain`, и TipTap вставит теги видимым текстом.
+
+**Право боту всё равно нужно.** Композер публикует тем же `@dropwebpay_bot`, поэтому без `can_post_messages`
+отправка упадёт и из кабинета тоже.
