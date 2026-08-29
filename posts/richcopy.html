@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>richcopy — HTML в буфер обмена</title>
+<style>
+/* ------------------------------------------------------------------ *
+ * Design tokens — единственный источник правды для цвета, ритма и форм.
+ * Ни одно значение ниже не должно задаваться мимо этих переменных.
+ * ------------------------------------------------------------------ */
+:root {
+  color-scheme: dark;
+
+  /* Поверхности */
+  --c-bg:             #0B0F0D;
+  --c-surface:        #111614;
+  --c-surface-raised: #161D1A;
+  --c-surface-sunken: #0D1211;
+  --c-border:         #1E2724;
+  --c-border-strong:  #2A3733;
+
+  /* Текст */
+  --c-text:           #E7EDEA;
+  --c-text-muted:     #8A9793;
+
+  /* Бренд и семантика */
+  --c-accent:         #009938;
+  --c-accent-hi:      #00B845;
+  --c-accent-lo:      #007C2D;
+  --c-accent-ink:     #FFFFFF;
+  --c-success:        #3DD68C;
+  --c-error:          #F2555A;
+
+  /* Тонированные подложки на базе акцента */
+  --c-accent-wash:    rgba(0, 153, 56, 0.14);
+  --c-accent-edge:    rgba(0, 153, 56, 0.24);
+  --c-hairline-wash:  rgba(255, 255, 255, 0.03);
+  --c-stripe:         rgba(255, 255, 255, 0.022);
+
+  /* Шкала отступов — 8px */
+  --sp-half: 4px;
+  --sp-1:  8px;
+  --sp-2: 16px;
+  --sp-3: 24px;
+  --sp-4: 32px;
+  --sp-5: 40px;
+  --sp-6: 48px;
+  --sp-8: 64px;
+
+  /* Радиусы */
+  --r-sm:  8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+
+  /* Типографика */
+  --fs-xs:   12px;
+  --fs-sm:   13px;
+  --fs-base: 15px;
+  --fs-md:   17px;
+  --fs-lg:   21px;
+  --fs-xl:   28px;
+
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Движение */
+  --dur: 150ms;
+  --ease: cubic-bezier(0.2, 0.6, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Атмосфера: мягкий акцентный вымыв сверху, без резких градиентов. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(880px 380px at 50% -12%, rgba(0, 153, 56, 0.13), transparent 68%),
+    radial-gradient(560px 300px at 108% 4%, rgba(0, 153, 56, 0.05), transparent 70%);
+}
+
+::selection { background: var(--c-accent-edge); color: var(--c-text); }
+
+:focus-visible {
+  outline: 2px solid var(--c-accent-hi);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Каркас
+ * ------------------------------------------------------------------ */
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--sp-8) var(--sp-3) var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.masthead { margin-bottom: var(--sp-1); }
+
+.masthead__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+.masthead__mark {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 3px;
+  background: var(--c-accent);
+  box-shadow: 0 0 0 4px rgba(0, 153, 56, 0.12);
+}
+
+.masthead__lede {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.65;
+}
+
+.panel {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.panel--preview { background: var(--c-surface-raised); }
+
+.panel__label {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * Поле ввода
+ * ------------------------------------------------------------------ */
+.editor {
+  display: block;
+  width: 100%;
+  min-height: 260px;
+  resize: vertical;
+  padding: var(--sp-2);
+  background: var(--c-surface-sunken);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  line-height: 1.65;
+  tab-size: 2;
+  transition: border-color var(--dur) var(--ease);
+}
+
+.editor::placeholder { color: var(--c-text-muted); }
+.editor:focus { outline: none; border-color: var(--c-accent); }
+.editor:focus-visible { outline: 2px solid var(--c-accent-hi); outline-offset: 2px; }
+
+/* ------------------------------------------------------------------ *
+ * Кнопки
+ * ------------------------------------------------------------------ */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 12px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--c-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.btn--primary { background: var(--c-accent); color: var(--c-accent-ink); }
+.btn--primary:hover { background: var(--c-accent-hi); }
+.btn--primary:active { background: var(--c-accent-lo); }
+
+.btn--secondary { border-color: var(--c-border); }
+.btn--secondary:hover { border-color: var(--c-border-strong); background: var(--c-hairline-wash); }
+
+.btn--ghost { border-color: transparent; }
+.btn--ghost:hover { border-color: var(--c-border); background: var(--c-hairline-wash); }
+
+.hint {
+  margin-left: auto;
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-half);
+}
+
+.hint kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1;
+  padding: 4px 6px;
+  border: 1px solid var(--c-border-strong);
+  border-radius: 5px;
+  background: var(--c-surface-sunken);
+  color: var(--c-text);
+}
+
+/* ------------------------------------------------------------------ *
+ * Статус
+ * ------------------------------------------------------------------ */
+.status {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted);
+  transition: color 260ms var(--ease);
+}
+
+.status[data-tone="ok"]    { color: var(--c-success); }
+.status[data-tone="error"] { color: var(--c-error); }
+
+/* ------------------------------------------------------------------ *
+ * Предпросмотр — рендер произвольного HTML, отдельная визуальная зона
+ * ------------------------------------------------------------------ */
+.preview {
+  padding: var(--sp-3);
+  background: var(--c-surface-sunken);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  overflow-wrap: anywhere;
+}
+
+.preview:empty::before {
+  content: "Пусто — вставьте HTML выше.";
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.preview :where(h2, h4, p, table, details, footer, blockquote, ul, ol, img) {
+  margin: 0 0 var(--sp-2);
+}
+.preview > :last-child,
+.preview details > :last-child { margin-bottom: 0; }
+
+.preview h2 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.preview h4 {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--c-text);
+}
+.preview > h4:first-child { margin-top: 0; }
+
+.preview p { font-size: 14px; line-height: 1.65; }
+
+.preview a {
+  color: var(--c-success);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(61, 214, 140, 0.35);
+}
+.preview a:hover { border-bottom-color: var(--c-success); }
+
+.preview code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 2px 6px;
+  border: 1px solid var(--c-accent-edge);
+  border-radius: 6px;
+  background: var(--c-accent-wash);
+  color: var(--c-text);
+}
+
+.preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-hairline-wash);
+}
+
+.preview table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.preview th,
+.preview td {
+  padding: 10px 12px;
+  border: 1px solid var(--c-border-strong);
+  text-align: left;
+  vertical-align: top;
+}
+
+.preview th {
+  background: var(--c-hairline-wash);
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.preview tr:nth-child(even) td { background: var(--c-stripe); }
+
+.preview details {
+  padding: var(--sp-2);
+  border: 1px solid var(--c-border-strong);
+  border-left: 2px solid var(--c-accent);
+  border-radius: var(--r-md);
+  background: var(--c-hairline-wash);
+}
+
+.preview summary {
+  margin-bottom: var(--sp-1);
+  font-weight: 600;
+  font-size: 14px;
+  list-style: none;
+  cursor: default;
+}
+.preview summary::-webkit-details-marker { display: none; }
+
+.preview hr {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--c-border-strong);
+  margin: var(--sp-3) 0;
+}
+
+.preview footer {
+  font-size: var(--fs-sm);
+  color: var(--c-text-muted);
+}
+
+.preview tg-emoji {
+  border-bottom: 1px dotted var(--c-accent-edge);
+}
+
+@media (max-width: 560px) {
+  .shell { padding: var(--sp-5) var(--sp-2) var(--sp-6); }
+  .panel { padding: var(--sp-2); }
+  .btn { flex: 1 1 auto; }
+  .hint { margin-left: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<main class="shell">
+
+  <header class="masthead">
+    <h1 class="masthead__title"><span class="masthead__mark" aria-hidden="true"></span>richcopy</h1>
+    <p class="masthead__lede">Кладёт HTML в буфер с флейвором text/html — TipTap вставит его как настоящие ноды, а не как текст.</p>
+  </header>
+
+  <section class="panel">
+    <label class="panel__label" for="src">Исходный HTML</label>
+    <textarea id="src" class="editor" spellcheck="false" placeholder="Вставьте HTML…"></textarea>
+
+    <div class="actions">
+      <button type="button" id="btn-copy" class="btn btn--primary">Скопировать как HTML</button>
+      <button type="button" id="btn-load" class="btn btn--secondary">Загрузить пост dropweb proxy</button>
+      <button type="button" id="btn-clear" class="btn btn--ghost">Очистить</button>
+      <span class="hint"><kbd>⌘</kbd><kbd>↵</kbd><span>в поле — скопировать</span></span>
+    </div>
+
+    <p class="status" id="status" role="status" aria-live="polite" data-tone="neutral">Готов к работе.</p>
+  </section>
+
+  <section class="panel panel--preview">
+    <h2 class="panel__label">Предпросмотр</h2>
+    <div class="preview" id="preview"></div>
+  </section>
+
+</main>
+
+<script type="text/plain" id="payload">
+<img src="https://raw.githubusercontent.com/enkinvsh/dropweb-proxy/main/assets/brand/header.png"/><h2><tg-emoji emoji-id="5265201189850488842">🆕</tg-emoji> dropweb proxy — расширение для браузера <tg-emoji emoji-id="5264868767971713460">💚</tg-emoji></h2><p>Иногда туннель нужен ровно в одном месте — в браузере. На рабочем ноутбуке, где уже поднят корпоративный VPN. На машине, куда не поставить системную программу. В отдельном профиле Chrome, который живёт своей жизнью.</p><p>Для таких случаев мы выпустили <b>dropweb proxy</b>. Он уже в Chrome Web Store и в каталоге дополнений Firefox.</p><h4><tg-emoji emoji-id="5264725487862720786">🖥</tg-emoji> Одна кнопка, и система не тронута</h4><p>Включается и выключается кнопкой на панели браузера. Иконка показывает ровно то, что есть: серая — выключено, зелёный логотип — работает, оранжевая — что-то не так.</p><p>Расширение не поднимает TUN-интерфейс, не просит прав администратора и не трогает системные настройки — поэтому спокойно живёт рядом с рабочим VPN.</p><h4><tg-emoji emoji-id="5265016038105324959">👁️</tg-emoji> Закрывает утечку WebRTC</h4><p>Сайт может узнать ваш настоящий IP через WebRTC — мимо туннеля. Обычный VPN этот канал не закрывает, и человек годами уверен, что спрятался.</p><p>Пока прокси включён, расширение закрывает утечку само: в Chrome трафик WebRTC идёт через прокси, в Firefox WebRTC отключается. Откройте <a href="https://browserleaks.com/webrtc">browserleaks.com/webrtc</a> до и после — разницу видно сразу.</p><h4><tg-emoji emoji-id="5265050526692711464">🔒</tg-emoji> Ни аккаунтов, ни серверов, ни аналитики</h4><p>Расширение ничего не собирает и никуда не отправляет — настройки лежат у вас на устройстве. Разрешений минимум, к содержимому страниц доступа нет вообще.</p><p>Исходники открыты под MIT — можно прочитать всё до последней строчки.</p><h4><tg-emoji emoji-id="5265234995538075373">🟢</tg-emoji> С dropweb работает из коробки</h4><p>В настройках уже прописан <code>127.0.0.1:7890</code> — ровно тот порт, который слушает ядро mihomo в десктопном dropweb. Запустили приложение, нажали кнопку в браузере — всё.</p><details><summary><tg-emoji emoji-id="5265192428117208527">🧠</tg-emoji> Если dropweb не установлен</summary><p>Расширение самостоятельное и дружит с любым локальным ядром — mihomo, clash, sing-box, xray. На странице настроек выбираете HTTP или SOCKS5, указываете хост и порт, при желании правите список исключений: по умолчанию там <code>localhost</code>, <code>127.0.0.1</code> и <code>::1</code>.</p><p>Сохранение при включённом прокси применяется сразу, перезапускать браузер не нужно.</p></details><table bordered striped><tr><th>Браузер</th><th>Установить</th></tr><tr><td>Chrome, Edge, Яндекс.Браузер и другие на Chromium</td><td><a href="https://chromewebstore.google.com/detail/dropweb-proxy/fahljajpfmhcjnkaghomijckmplmoogi">Chrome Web Store</a></td></tr><tr><td>Firefox</td><td><a href="https://addons.mozilla.org/ru/firefox/addon/dropweb-proxy/">Firefox Add-ons</a></td></tr></table><hr/><footer>dropweb proxy 0.1.3 · <a href="https://github.com/enkinvsh/dropweb-proxy">исходники</a> · MIT</footer>
+</script>
+
+<script>
+(() => {
+  'use strict';
+
+  const IDLE_STATUS = 'Готов к работе.';
+  const STATUS_RESET_MS = 4500;
+  const RENDER_DEBOUNCE_MS = 150;
+  const CHARSET_PREFIX = '<meta charset="utf-8">';
+
+  const srcEl = document.getElementById('src');
+  const previewEl = document.getElementById('preview');
+  const statusEl = document.getElementById('status');
+  const payloadEl = document.getElementById('payload');
+
+  const dropwebPost = payloadEl.textContent.trim();
+
+  let statusTimer = 0;
+  let renderTimer = 0;
+
+  /* --------------------------------------------------------------- *
+   * Статус
+   * --------------------------------------------------------------- */
+  const setStatus = (text, tone) => {
+    statusEl.textContent = text;
+    statusEl.dataset.tone = tone;
+    window.clearTimeout(statusTimer);
+    if (text !== IDLE_STATUS) {
+      statusTimer = window.setTimeout(() => {
+        statusEl.textContent = IDLE_STATUS;
+        statusEl.dataset.tone = 'neutral';
+      }, STATUS_RESET_MS);
+    }
+  };
+
+  const countMatches = (haystack, pattern) => (haystack.match(pattern) || []).length;
+
+  const describe = (html) => {
+    const parts = [];
+    const emoji = countMatches(html, /<tg-emoji emoji-id=/g);
+    const details = countMatches(html, /<details/g);
+    const tables = countMatches(html, /<table/g);
+
+    if (emoji > 0) { parts.push(emoji + ' tg-emoji'); }
+    if (details > 0) { parts.push(details + ' details'); }
+    if (tables > 0) { parts.push(tables + ' table'); }
+
+    const size = html.length + ' симв.';
+    return parts.length > 0 ? size + ' · ' + parts.join(', ') : size;
+  };
+
+  /* --------------------------------------------------------------- *
+   * Основной путь копирования: синхронное событие copy.
+   * Не требует разрешений и работает из file://.
+   * --------------------------------------------------------------- */
+  function copyAsHtml(html) {
+    const onCopy = (e) => {
+      e.clipboardData.setData('text/html', html);
+      e.clipboardData.setData('text/plain', html);
+      e.preventDefault();
+    };
+    const ta = document.createElement('textarea');
+    ta.value = ' ';
+    ta.setAttribute('aria-hidden', 'true');
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    document.addEventListener('copy', onCopy);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } finally {
+      document.removeEventListener('copy', onCopy);
+      ta.remove();
+    }
+    return ok;
+  }
+
+  /* Запасной путь: асинхронный Clipboard API с обоими флейворами. */
+  const copyViaClipboardApi = async (html) => {
+    if (!navigator.clipboard || typeof navigator.clipboard.write !== 'function') {
+      throw new Error('Clipboard API недоступен');
+    }
+    if (typeof window.ClipboardItem !== 'function') {
+      throw new Error('ClipboardItem не поддерживается');
+    }
+    const item = new window.ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([html], { type: 'text/plain' })
+    });
+    await navigator.clipboard.write([item]);
+  };
+
+  const handleCopy = async () => {
+    const source = srcEl.value.trim();
+
+    if (source === '') {
+      setStatus('Нечего копировать — поле пустое.', 'error');
+      srcEl.focus();
+      return;
+    }
+
+    const clipboardHtml = CHARSET_PREFIX + source;
+
+    if (copyAsHtml(clipboardHtml)) {
+      setStatus('Скопировано · ' + describe(source), 'ok');
+      return;
+    }
+
+    try {
+      await copyViaClipboardApi(clipboardHtml);
+      setStatus('Скопировано через Clipboard API · ' + describe(source), 'ok');
+    } catch (err) {
+      const reason = err && err.message ? err.message : String(err);
+      setStatus('Не удалось скопировать: ' + reason, 'error');
+    }
+  };
+
+  /* --------------------------------------------------------------- *
+   * Предпросмотр
+   * --------------------------------------------------------------- */
+  const render = () => {
+    previewEl.innerHTML = srcEl.value;
+    const collapsibles = previewEl.querySelectorAll('details');
+    for (const node of collapsibles) {
+      node.setAttribute('open', '');
+    }
+  };
+
+  const scheduleRender = () => {
+    window.clearTimeout(renderTimer);
+    renderTimer = window.setTimeout(render, RENDER_DEBOUNCE_MS);
+  };
+
+  /* --------------------------------------------------------------- *
+   * Привязки
+   * --------------------------------------------------------------- */
+  document.getElementById('btn-copy').addEventListener('click', handleCopy);
+
+  document.getElementById('btn-load').addEventListener('click', () => {
+    srcEl.value = dropwebPost;
+    render();
+    setStatus('Загружен пост dropweb proxy · ' + describe(dropwebPost), 'ok');
+    srcEl.focus();
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    srcEl.value = '';
+    render();
+    setStatus('Поле очищено.', 'neutral');
+    srcEl.focus();
+  });
+
+  srcEl.addEventListener('input', scheduleRender);
+
+  srcEl.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleCopy();
+    }
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
