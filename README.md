@@ -1,3 +1,7 @@
+<div align="right">
+  <a href="README_EN.md">English</a>
+</div>
+
 # dropweb-channel — студия анимированных стикеров
 
 Среда для создания брендовых анимированных Telegram-стикеров/эмодзи dropweb:
@@ -54,3 +58,7 @@ dropweb-studio            # алиас: поднимает студию + отк
 `/api/save`, `/api/pack/create|rename|delete`, `/api/emoji/delete`.
 
 Подробности бренда и рецепт — `docs/brand-tokens.md`.
+
+## Лицензия
+
+MIT — см. [LICENSE](LICENSE).
